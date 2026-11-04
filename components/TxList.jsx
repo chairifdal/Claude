@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, SlidersHorizontal } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { dayLabel, timeLabel, firstName, formatIDR } from "@/lib/format";
 import { Avatar, CategoryIcon, Empty, Money } from "./ui";
@@ -39,6 +39,14 @@ export function TxRow({ tx, perspectiveId }) {
         <I style={{ width: 22, height: 22 }} strokeWidth={2.2} />
       </span>
     );
+  } else if (tx.is_adjustment) {
+    title = t("Penyesuaian saldo");
+    meta = fromName;
+    icon = (
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[12px] bg-gradient-to-br from-[#8E8E93] to-[#636366] text-white" aria-hidden="true">
+        <SlidersHorizontal style={{ width: 20, height: 20 }} strokeWidth={2.2} />
+      </span>
+    );
   } else {
     title = cat?.name || (tx.type === "income" ? t("Pemasukan") : t("Pengeluaran"));
     meta = [parent?.name, fromName].filter(Boolean).join(" · ");
@@ -57,7 +65,7 @@ export function TxRow({ tx, perspectiveId }) {
         <p className="truncate text-[17px]">{title}</p>
         <p className="flex items-center gap-1.5 truncate text-[14px] text-ink-soft">
           {byOther && creator && <Avatar profile={creator} size={18} />}
-          <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || meta}{tx.recurring_id ? ` · ${t("otomatis")}` : ""}</span>
+          <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.is_adjustment ? meta : tx.note || meta}{tx.recurring_id ? ` · ${t("otomatis")}` : ""}</span>
         </p>
       </div>
       <div className="flex-none text-right">

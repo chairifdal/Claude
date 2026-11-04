@@ -2,13 +2,16 @@
 import { useMemo, useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
-import { monthRange, amountToInput, parseAmount, formatIDR } from "@/lib/format";
+import { amountToInput, parseAmount } from "@/lib/format";
+import { daysBetween } from "@/lib/period";
 import AmountInput from "@/components/AmountInput";
 import { CategoryIcon, Money, PageHeader, Sheet, Empty } from "@/components/ui";
 
 export default function BudgetPage() {
-  const { categories, categoryById, budgets, user, t, countsInStats, statRows } = useApp();
-  const { start, end } = useMemo(() => monthRange(), []);
+  const { categories, categoryById, budgets, user, t, countsInStats, statRows, cycle } = useApp();
+  // Anggaran berlaku per periode keuangan (bulan kalender, tanggal tetap, atau gajian ke gajian)
+  const per = cycle.rangeOf(new Date());
+  const start = per.start, end = per.end;
   const { rows } = useTransactions({ from: start, to: end, limit: 3000 });
   const [edit, setEdit] = useState(null);
 
@@ -28,11 +31,11 @@ export default function BudgetPage() {
   const totalBudget = withBudget.reduce((s, b) => s + b.amount, 0);
   const totalSpent = withBudget.reduce((s, b) => s + b.spent, 0);
   const pct = totalBudget ? Math.min(100, (totalSpent / totalBudget) * 100) : 0;
-  const daysLeft = new Date(end - 1).getDate() - new Date().getDate() + 1;
+  const daysLeft = Math.max(1, daysBetween(new Date(), end));
 
   return (
     <div>
-      <PageHeader title={t("Anggaran")} subtitle={t("Bulan ini, {n} hari lagi", { n: daysLeft })} />
+      <PageHeader title={t("Anggaran")} subtitle={`${cycle.label(new Date())} · ${t("{n} hari lagi", { n: daysLeft })}`} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">
@@ -46,7 +49,7 @@ export default function BudgetPage() {
             </p>
             {totalBudget > totalSpent && (
               <p className="mt-3 text-[16px] text-ink-soft">
-                {t("Aman dipakai")} <Money value={Math.floor((totalBudget - totalSpent) / daysLeft)} className="font-medium text-ink" dots={4} /> {t("per hari sampai akhir bulan")}
+                {t("Aman dipakai")} <Money value={Math.floor((totalBudget - totalSpent) / daysLeft)} className="font-medium text-ink" dots={4} /> {cycle.isCalendar ? t("per hari sampai akhir bulan") : t("per hari sampai gajian berikutnya")}
               </p>
             )}
           </section>
@@ -149,7 +152,7 @@ function BudgetForm({ cat, budget, onDone }) {
       </div>
       <div>
         <label htmlFor="budget-amount" className="label">{t("Batas per bulan")}</label>
-        <AmountInput id="budget-amount" autoFocus value={amount} onChange={setAmount} />
+        <AmountInput id="budget-amount" value={amount} onChange={setAmount} />
       </div>
       <div className="flex gap-2">
         {budget && <button className="btn-danger px-4" onClick={remove} aria-label={t("Hapus")}><Trash2 className="h-5 w-5" /></button>}

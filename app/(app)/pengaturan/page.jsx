@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { useTheme } from "@/lib/theme";
+import PeriodSettings from "@/components/PeriodSettings";
 import { ROLE_LABEL } from "@/lib/constants";
 import { Avatar, PageHeader, Segmented, Switch } from "@/components/ui";
 
@@ -91,6 +92,8 @@ export default function SettingsPage() {
             { value: "en", label: "English" },
           ]} />
         </section>
+
+        <PeriodSettings />
 
         <section className="card p-5">
           <p className="flex items-center gap-3 text-[17px]"><span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#5856D6] text-white"><Moon className="h-[18px] w-[18px]" /></span> {t("Tampilan")}</p>

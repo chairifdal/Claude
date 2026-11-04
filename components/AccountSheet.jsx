@@ -65,7 +65,12 @@ function AccountForm({ account }) {
 
   async function remove() {
     const { error } = await supabase.from("accounts").delete().eq("id", account.id);
-    if (error) return notify(error.message, "err");
+    if (error) {
+      setConfirm(false);
+      return notify(error.message.includes("ACCOUNT_HAS_SHARED_TRANSFERS")
+        ? t("Akun ini punya transfer dengan akun pasangan, jadi tidak bisa dihapus. Arsipkan saja.")
+        : error.message, "err");
+    }
     notify(t("Akun dihapus"));
     refresh(); closeAccount(); router.push("/dompet");
   }

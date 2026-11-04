@@ -138,15 +138,22 @@ function TxForm({ init }) {
 
   return (
     <div className="space-y-6">
-      <Segmented value={type} onChange={setType} options={[
-        { value: "expense", label: t("Pengeluaran") },
-        { value: "income", label: t("Pemasukan") },
-        { value: "transfer", label: t("Transfer") },
-      ]} />
+      {/* Peran "Lihat & transfer" hanya boleh transfer: jangan tawarkan ganti jenis saat mengubah transfernya */}
+      {editing && editing.type === "transfer" && !canRecord(accountById[editing.account_id]) ? (
+        <p className="rounded-[12px] bg-fill px-4 py-2.5 text-[15px] font-semibold">{t("Transfer")}</p>
+      ) : editing?.is_adjustment ? (
+        <p className="rounded-[12px] bg-fill px-4 py-2.5 text-[15px] font-semibold">{t("Penyesuaian saldo")}</p>
+      ) : (
+        <Segmented value={type} onChange={setType} options={[
+          { value: "expense", label: t("Pengeluaran") },
+          { value: "income", label: t("Pemasukan") },
+          { value: "transfer", label: t("Transfer") },
+        ]} />
+      )}
 
       <div>
         <label htmlFor="tx-amount" className="label">{t("Jumlah")}</label>
-        <AmountInput id="tx-amount" large value={amount} onChange={setAmount} autoFocus={!editing && !init.amount}
+        <AmountInput id="tx-amount" large value={amount} onChange={setAmount}
           tone={type === "income" ? "text-income" : "text-ink"} className="border-b-2 border-line pb-2 focus-within:border-ink" />
         <div className="mt-3 flex flex-wrap gap-2">
           {QUICK.map((q) => (
