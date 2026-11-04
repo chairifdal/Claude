@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+ /* Warna sistem iOS. Nilai = kanal RGB supaya bisa dipakai dengan opacity Tailwind. */
+:root {
+  color-scheme: light;
+  --canvas: 242 242 247;  --surface: 255 255 255;  --raised: 247 247 250;  --seg: 255 255 255;  --switchoff: 233 233 234;
+  --ink: 0 0 0;  --ink-soft: 108 108 112;  --ink-mute: 142 142 147;
+  --line: 229 229 234;  --rule: 239 239 244;  --control: 209 209 214;
+  --fill: 118 118 128;  --fill-a: 0.12;  --shadow-a: 0.04;
+  --brand: 0 122 255;  --brand-50: 229 241 255;
+  --income: 36 138 61;  --income-bright: 52 199 89;  --income-soft: 227 249 232;  --income-ink: 11 77 29;
+  --expense: 255 59 48;  --expense-soft: 255 229 227;  --expense-ink: 142 26 19;
+  --orange: 255 149 0;  --warn-soft: 255 244 224;  --warn-ink: 160 90 0;
+  --indigo: 88 86 214;
+}
+.dark {
+  color-scheme: dark;
+  --canvas: 0 0 0;  --surface: 28 28 30;  --raised: 44 44 46;  --seg: 99 99 102;  --switchoff: 57 57 61;
+  --ink: 255 255 255;  --ink-soft: 152 152 159;  --ink-mute: 128 128 134;
+  --line: 56 56 58;  --rule: 44 44 46;  --control: 72 72 74;
+  --fill: 118 118 128;  --fill-a: 0.24;  --shadow-a: 0;
+  --brand: 10 132 255;  --brand-50: 10 40 77;
+  --income: 48 209 88;  --income-bright: 48 209 88;  --income-soft: 13 51 24;  --income-ink: 125 230 153;
+  --expense: 255 69 58;  --expense-soft: 64 20 17;  --expense-ink: 255 160 153;
+  --orange: 255 159 10;  --warn-soft: 61 40 5;  --warn-ink: 255 196 110;
+  --indigo: 94 92 230;
+}
+html, body { background: rgb(var(--canvas)); color: rgb(var(--ink)); }
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; font-size: 17px; letter-spacing: -0.01em; }
+* { -webkit-font-smoothing: antialiased; }
+input, select, textarea, button { font: inherit; letter-spacing: inherit; }
+.tabular, .num { font-variant-numeric: tabular-nums; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
+.pt-safe { padding-top: env(safe-area-inset-top); }
+:focus-visible { outline: 2px solid #007AFF; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
+
+@layer components {
+  /* Kartu & daftar berkelompok ala iOS */
+  .card { @apply rounded-card bg-surface shadow-card; }
+  .chip { @apply inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[15px] font-medium transition active:scale-95; }
+  .field { @apply h-12 w-full rounded-control border-0 bg-fill px-4 text-[17px] text-ink outline-none transition placeholder:text-ink-mute focus:bg-surface focus:ring-2 focus:ring-brand-600; }
+  .label { @apply mb-2 block pl-1 text-[13px] font-medium uppercase tracking-wide text-ink-soft; }
+  .btn { @apply inline-flex h-[50px] items-center justify-center gap-2 rounded-[14px] px-5 text-[17px] font-semibold transition active:scale-[.98] active:opacity-80 disabled:opacity-40 disabled:active:scale-100; }
+  .btn-primary { @apply btn bg-brand-600 text-white shadow-lift; }
+  .btn-ghost { @apply btn bg-fill text-brand-600; }
+  .btn-danger { @apply btn bg-expense-soft text-expense; }
+  .icon-btn { @apply grid h-10 w-10 place-items-center rounded-full bg-fill text-brand-600 transition active:scale-90; }
+  .section-title { @apply text-[22px] font-bold tracking-tight text-ink; }
+  .link { @apply text-[17px] font-normal text-brand-600; }
+}
