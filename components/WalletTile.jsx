@@ -4,7 +4,8 @@ import { Users } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_KINDS } from "@/lib/constants";
 import { firstName } from "@/lib/format";
-import { Money, shade } from "./ui";
+import { Money, shade, BrandTile } from "./ui";
+import { parseIcon } from "@/lib/brands";
 import { goalProgress } from "./GoalsCard";
 
 /** Kartu kecil bergradien untuk grid Dompet (tanpa animasi geser). */
@@ -26,9 +27,11 @@ export default function WalletTile({ account: a }) {
       style={{ background: `linear-gradient(140deg, ${shade(c, 20)} 0%, ${c} 55%, ${shade(c, -30)} 100%)` }}>
       <div className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/[.13]" />
       <div className="relative flex items-start justify-between">
-        <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-white/20 ring-1 ring-white/25">
-          <Icon className="h-[18px] w-[18px]" strokeWidth={2.3} />
-        </span>
+        {parseIcon(a.icon) ? <BrandTile icon={a.icon} size={36} className="ring-1 ring-white/40" /> : (
+          <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-white/20 ring-1 ring-white/25">
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2.3} />
+          </span>
+        )}
         {(shared || a.member_count > 0) && (
           <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">
             <Users className="h-3 w-3" /> {shared ? firstName(people[a.owner_id]) : t("Bersama")}

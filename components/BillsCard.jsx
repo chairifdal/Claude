@@ -48,7 +48,7 @@ export default function BillsCard({ monthRows, limit = 5 }) {
                 </div>
                 <div className="w-[68px] flex-none text-right">
                   <button className="h-8 rounded-full bg-brand-600 px-3.5 text-[14px] font-semibold text-white active:opacity-70"
-                    onClick={() => openTx({ type: "transfer", toAccountId: a.id, amount, note: t("Bayar tagihan {name}", { name: a.name }) })}>
+                    onClick={() => openTx({ type: "transfer", toAccountId: a.id, amount, note: t("Bayar tagihan {name}", { name: a.name }), pay: true })}>
                     {t("Bayar")}
                   </button>
                 </div>
@@ -71,7 +71,7 @@ export default function BillsCard({ monthRows, limit = 5 }) {
                   <div className="w-[68px] flex-none text-right">
                     {s.state !== "paid" && canRecord(acc) && (
                       <button className="h-8 rounded-full bg-brand-600 px-3.5 text-[14px] font-semibold text-white active:opacity-70"
-                        onClick={() => openTx({ type: "expense", accountId: b.account_id, amount: b.amount, categoryId: b.category_id, note: b.name, billId: b.id })}>
+                        onClick={() => openTx({ type: "expense", accountId: b.account_id, amount: b.amount, categoryId: b.category_id, note: b.name, billId: b.id, pay: true })}>
                         {t("Bayar")}
                       </button>
                     )}

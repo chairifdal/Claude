@@ -122,6 +122,8 @@ function TxForm({ init }) {
     notify(t("Catatan dihapus")); refresh(); closeTx();
   }
 
+  const verb = init.pay && !editing ? t("Bayar") : t("Simpan");
+
   // Tombol simpan menempel di bawah layar (sticky di dalam area scroll)
   const footer = (
       <div className="sticky bottom-0 -mx-4 mt-6 flex gap-2 border-t border-line bg-canvas/90 px-4 pt-3 pb-safe backdrop-blur-xl">
@@ -129,7 +131,7 @@ function TxForm({ init }) {
           ? <button className="btn-danger" onClick={remove} disabled={busy}>{t("Yakin hapus?")}</button>
           : <button className="btn-danger w-12 px-0" onClick={() => setConfirmDelete(true)} aria-label={t("Hapus")}><Trash2 className="h-5 w-5" /></button>)}
         <button className="btn-primary flex-1" disabled={!valid || busy} onClick={save}>
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : value > 0 ? `${t("Simpan")} ${formatIDR(value + feeValue)}` : t("Simpan")}
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : value > 0 ? `${verb} ${formatIDR(value + feeValue)}` : verb}
         </button>
       </div>
   );

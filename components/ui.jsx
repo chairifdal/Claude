@@ -5,6 +5,7 @@ import { ChevronLeft, CheckCircle2, AlertCircle, Inbox } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { formatIDR } from "@/lib/format";
 import { ACCOUNT_KINDS, CATEGORY_ICONS } from "@/lib/constants";
+import { parseIcon } from "@/lib/brands";
 
 export function Money({ value, sign, compact, className = "", dots = 7 }) {
   const { hidden } = useApp();
@@ -70,8 +71,28 @@ export function CategoryIcon({ category, size = 40, className = "" }) {
   );
 }
 
-/** Ikon akun: tile bergradien warna kartu dengan ikon jenis akun. */
+/** Badge merek (bukan logo resmi) atau gambar unggahan, dalam tile membulat. */
+export function BrandTile({ icon, size = 40, className = "" }) {
+  const p = parseIcon(icon);
+  if (!p) return null;
+  const radius = size * 0.27;
+  if (p.type === "image") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={p.url} alt="" width={size} height={size} loading="lazy" className={`shrink-0 bg-white object-cover ${className}`} style={{ width: size, height: size, borderRadius: radius }} />;
+  }
+  const { color, ink, text } = p.brand;
+  const fs = size * (text.length <= 3 ? 0.36 : text.length <= 5 ? 0.27 : 0.2);
+  return (
+    <span className={`grid shrink-0 place-items-center overflow-hidden font-extrabold leading-none tracking-tight ${className}`} aria-hidden="true"
+      style={{ width: size, height: size, borderRadius: radius, fontSize: fs, color: ink || "#fff", background: `linear-gradient(150deg, ${shade(color, 12)}, ${color})` }}>
+      {text}
+    </span>
+  );
+}
+
+/** Ikon akun: badge merek / gambar kalau dipilih, kalau tidak tile warna kartu dengan ikon jenis akun. */
 export function AccountGlyph({ account, size = 40, className = "" }) {
+  if (parseIcon(account?.icon)) return <BrandTile icon={account.icon} size={size} className={className} />;
   const Icon = ACCOUNT_KINDS[account?.kind]?.icon || ACCOUNT_KINDS.bank.icon;
   const c = account?.color || "#06B6D4";
   return (

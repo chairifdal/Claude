@@ -3,7 +3,8 @@ import { Users, Nfc } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_KINDS, ROLE_LABEL } from "@/lib/constants";
 import { firstName } from "@/lib/format";
-import { Money, shade } from "./ui";
+import { Money, shade, BrandTile } from "./ui";
+import { parseIcon } from "@/lib/brands";
 
 /** Kartu ala Apple Wallet: gradien warna akun, lingkaran halus, chip emas. */
 export function BankCard({ account, className = "", concealed = false }) {
@@ -24,9 +25,11 @@ export function BankCard({ account, className = "", concealed = false }) {
       <div className="pointer-events-none absolute -bottom-20 right-16 h-44 w-44 rounded-full bg-white/[.08]" />
       <div className="relative flex h-full flex-col p-5">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-white/20 ring-1 ring-white/25 backdrop-blur">
-            <Icon className="h-5 w-5" strokeWidth={2.2} />
-          </span>
+          {parseIcon(account.icon) ? <BrandTile icon={account.icon} size={40} className="ring-1 ring-white/40" /> : (
+            <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-white/20 ring-1 ring-white/25 backdrop-blur">
+              <Icon className="h-5 w-5" strokeWidth={2.2} />
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-[19px] font-bold tracking-tight">{account.name}</p>
             <p className="truncate text-[13px] font-medium text-white/75">
