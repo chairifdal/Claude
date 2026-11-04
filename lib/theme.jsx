@@ -45,7 +45,7 @@ export const useTheme = () => useContext(Ctx);
 /** Warna grafik per tema (Recharts tidak membaca CSS variable). */
 export function chartColors(isDark) {
   return isDark
-    ? { grid: "#38383A", tick: "#98989F", axis: "#48484A", cursor: "rgba(118,118,128,.24)", accent: "#38BDF8", soft: "#0C4A6E", ref: "#98989F", tipBg: "#2C2C2E", tipBorder: "#38383A", future: "#2C2C2E" }
-    : { grid: "#E5E5EA", tick: "#6C6C70", axis: "#D1D1D6", cursor: "#F2F2F7", accent: "#0EA5E9", soft: "#BAE6FD", ref: "#6C6C70", tipBg: "#FFFFFF", tipBorder: "#E5E5EA", future: "#EFEFF4" };
+    ? { grid: "#38383A", tick: "#98989F", axis: "#48484A", cursor: "rgba(118,118,128,.24)", accent: "#22D3EE", soft: "#164E63", ref: "#98989F", tipBg: "#2C2C2E", tipBorder: "#38383A", future: "#2C2C2E" }
+    : { grid: "#E5E5EA", tick: "#6C6C70", axis: "#D1D1D6", cursor: "#F2F2F7", accent: "#06B6D4", soft: "#A5F3FC", ref: "#6C6C70", tipBg: "#FFFFFF", tipBorder: "#E5E5EA", future: "#EFEFF4" };
 }
 

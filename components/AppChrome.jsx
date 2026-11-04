@@ -15,7 +15,7 @@ const TABS = [
 const ACTIONS = [
   { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
   { type: "income", label: "Pemasukan", icon: Plus, color: "#34C759" },
-  { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#0EA5E9" },
+  { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#2563EB" },
   { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, color: "#FF9500" },
 ];
 
@@ -37,7 +37,7 @@ export default function AppChrome() {
 
   const addButton = (cls) => (
     <button onClick={() => setOpen((o) => !o)} aria-label={t("Catat")} aria-expanded={open}
-      className={`grid place-items-center rounded-full bg-gradient-to-br from-[#38BDF8] via-[#0EA5E9] to-[#0284C7] text-white shadow-lift transition-transform duration-300 active:scale-90 ${open ? "rotate-45" : ""} ${cls}`}>
+      className={`grid place-items-center rounded-full bg-gradient-to-br from-[#22D3EE] via-[#2563EB] to-[#1E40AF] text-white shadow-lift transition-transform duration-300 active:scale-90 ${open ? "rotate-45" : ""} ${cls}`}>
       <Plus className="h-7 w-7" strokeWidth={2.6} />
     </button>
   );

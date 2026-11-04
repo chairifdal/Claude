@@ -20,7 +20,7 @@ module.exports = {
         rule: v("rule"),
         control: v("control"),
         fill: "rgb(var(--fill) / var(--fill-a))",
-        brand: { 50: v("brand-50"), 100: v("brand-50"), 400: "#38BDF8", 500: v("brand"), 600: v("brand"), 700: v("brand"), 900: "#075985" },
+        brand: { 50: v("brand-50"), 100: v("brand-50"), 400: "#60A5FA", 500: v("brand"), 600: v("brand"), 700: v("brand"), 900: "#172554" },
         income: { DEFAULT: v("income"), bright: v("income-bright"), soft: v("income-soft"), ink: v("income-ink") },
         expense: { DEFAULT: v("expense"), soft: v("expense-soft"), ink: v("expense-ink") },
         transfer: { DEFAULT: v("indigo"), soft: v("brand-50") },
@@ -29,7 +29,7 @@ module.exports = {
       borderRadius: { card: "20px", control: "12px", tile: "10px" },
       boxShadow: {
         card: "0 1px 2px rgb(0 0 0 / var(--shadow-a)), 0 6px 20px -12px rgb(0 0 0 / calc(var(--shadow-a) * 3))",
-        lift: "0 18px 36px -16px rgba(2,132,199,.5)",
+        lift: "0 18px 36px -16px rgba(30,64,175,.5)",
         float: "0 12px 40px -8px rgba(0,0,0,.28)",
         seg: "0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04)",
       },

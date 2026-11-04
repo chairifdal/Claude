@@ -129,7 +129,7 @@ export default function HomePage() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-5">
           {/* Kartu saldo bergradien */}
-          <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#38BDF8] via-[#0EA5E9] to-[#0369A1] p-5 text-white shadow-lift">
+          <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#2563EB] via-[#1E40AF] to-[#172554] p-5 text-white shadow-lift">
             <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-white/[.12]" />
             <div className="pointer-events-none absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-white/[.07]" />
             <p className="relative text-[15px] font-medium text-white/80">{t("Saldo tersedia di {n} akun lancar", { n: liquid.length })}</p>
@@ -173,7 +173,7 @@ export default function HomePage() {
               <span className="text-[14px] text-ink-soft">{t("pengeluaran")}</span>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Lane label={t("Pribadi saya")} value={m.mine} color="#0EA5E9" />
+              <Lane label={t("Pribadi saya")} value={m.mine} color="#06B6D4" />
               <Lane label={t("Akun bersama")} value={m.shared} color="#AF52DE" />
               <Lane label={partner ? firstName(partner) : t("Pasangan")} value={partner ? m.partnerSpent : null} color="#FF2D55" />
             </div>

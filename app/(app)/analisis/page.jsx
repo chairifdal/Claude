@@ -147,7 +147,7 @@ export default function AnalysisPage() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <Flow label={t("Masuk")} value={data.income} color="#34C759" sign />
               <Flow label={t("Keluar")} value={data.expense} color="#FF3B30" />
-              <Flow label={t("Sisa")} value={saved} color={saved >= 0 ? "#0EA5E9" : "#FF3B30"} sign />
+              <Flow label={t("Sisa")} value={saved} color={saved >= 0 ? "#06B6D4" : "#FF3B30"} sign />
             </div>
             {saveRate !== null && (
               <div className="mt-4">

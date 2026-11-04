@@ -174,7 +174,7 @@ export default function SettingsPage() {
   );
 }
 
-function Row({ href, icon: Icon, label, color = "#0EA5E9" }) {
+function Row({ href, icon: Icon, label, color = "#06B6D4" }) {
   return (
     <Link href={href} className="flex min-h-[52px] items-center gap-3 rounded-[14px] px-4 py-2.5 active:bg-fill">
       <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] text-white" style={{ background: color }}><Icon className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>

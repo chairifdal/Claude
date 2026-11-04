@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Archive, Trash2 } from "lucide-react";
+import { Check, Loader2, Archive, Trash2, Upload, X, Search } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_COLORS, ACCOUNT_KINDS } from "@/lib/constants";
 import { amountToInput, parseAmount } from "@/lib/format";
-import { Sheet, Switch } from "./ui";
+import { Sheet, Switch, BrandTile } from "./ui";
+import { BRANDS, BRAND_GROUPS } from "@/lib/brands";
 import { BankCard } from "./BankCard";
 import AmountInput from "./AmountInput";
 
@@ -31,17 +32,57 @@ function AccountForm({ account }) {
   const [include, setInclude] = useState(account ? account.include_in_totals !== false : true);
   const [goal, setGoal] = useState(account?.goal_amount ? amountToInput(account.goal_amount) : "");
   const [goalDate, setGoalDate] = useState(account?.goal_date || "");
+  const [icon, setIcon] = useState(account?.icon || "");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [brandGroup, setBrandGroup] = useState("bank");
+  const [brandQuery, setBrandQuery] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
   const isCredit = kind === "credit";
+
+  function pickBrand(b) {
+    setIcon(`brand:${b.id}`);
+    setColor(b.color);
+    const g = BRAND_GROUPS.find((x) => x.id === b.group);
+    if (g && kind !== "credit" && kind !== "cash") setKind(g.kind);
+    if (!name.trim()) setName(b.name);
+    setPickerOpen(false);
+  }
+
+  async function onUpload(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return notify(t("Pilih file gambar"), "err");
+    setUploading(true);
+    try {
+      const bmp = await createImageBitmap(file);
+      const side = Math.min(bmp.width, bmp.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 160;
+      canvas.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 160, 160);
+      const blob = await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Gagal memproses gambar"))), "image/png"));
+      const path = `${user.id}/${Date.now()}.png`;
+      const { error } = await supabase.storage.from("account-icons").upload(path, blob, { contentType: "image/png", cacheControl: "31536000" });
+      if (error) throw error;
+      setIcon(supabase.storage.from("account-icons").getPublicUrl(path).data.publicUrl);
+      setPickerOpen(false);
+    } catch (err) {
+      notify(err.message || t("Gagal mengunggah foto"), "err");
+    } finally { setUploading(false); }
+  }
+
+  const shownBrands = BRANDS.filter((b) => (brandQuery.trim() ? b.name.toLowerCase().includes(brandQuery.trim().toLowerCase()) : b.group === brandGroup));
   const initialValue = parseAmount(initial) * (negative || isCredit ? -1 : 1);
 
   async function save() {
     if (!name.trim()) return;
     setBusy(true);
     const payload = {
-      name: name.trim(), kind, color,
+      name: name.trim(), kind, color, icon: icon || null,
       initial_balance: initialValue,
       credit_limit: isCredit ? parseAmount(limit) || null : null,
       due_day: isCredit && dueDay ? Number(dueDay) : null,
@@ -77,7 +118,7 @@ function AccountForm({ account }) {
     refresh(); closeAccount(); router.push("/dompet");
   }
 
-  const preview = { name: name || t("Nama akun"), kind, color, balance: initialValue, credit_limit: parseAmount(limit), my_role: "owner", owner_id: user?.id, member_count: account?.member_count || 0 };
+  const preview = { name: name || t("Nama akun"), kind, color, icon, balance: initialValue, credit_limit: parseAmount(limit), my_role: "owner", owner_id: user?.id, member_count: account?.member_count || 0 };
 
   return (
     <div className="space-y-6 pb-6">
@@ -115,6 +156,45 @@ function AccountForm({ account }) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <p className="label">{t("Ikon")} <span className="font-normal normal-case tracking-normal">({t("opsional")})</span></p>
+        <div className="flex items-center gap-3">
+          {icon ? <BrandTile icon={icon} size={48} /> : <span className="grid h-12 w-12 place-items-center rounded-[13px] bg-fill text-[13px] text-ink-mute">{t("Bawaan")}</span>}
+          <button type="button" className="btn-ghost h-11 flex-1 px-3 text-[15px]" onClick={() => setPickerOpen((o) => !o)} aria-expanded={pickerOpen}>{t("Pilih merek")}</button>
+          <button type="button" className="btn-ghost h-11 flex-1 px-3 text-[15px]" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {t("Unggah")}
+          </button>
+          {icon && <button type="button" className="icon-btn" onClick={() => setIcon("")} aria-label={t("Hapus ikon")}><X className="h-4 w-4" /></button>}
+          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onUpload} />
+        </div>
+        {pickerOpen && (
+          <div className="mt-3 rounded-card bg-raised p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-mute" />
+              <input className="field h-10 pl-9 text-[16px]" placeholder={t("Cari merek")} aria-label={t("Cari merek")} value={brandQuery} onChange={(e) => setBrandQuery(e.target.value)} />
+            </div>
+            {!brandQuery.trim() && (
+              <div className="mt-3 grid grid-cols-3 gap-1 rounded-control bg-fill p-1" role="tablist">
+                {BRAND_GROUPS.map((g) => (
+                  <button key={g.id} type="button" role="tab" aria-selected={brandGroup === g.id} onClick={() => setBrandGroup(g.id)}
+                    className={`rounded-[9px] py-1.5 text-[14px] font-medium ${brandGroup === g.id ? "bg-seg text-ink shadow-seg" : "text-ink-soft"}`}>{t(g.label)}</button>
+                ))}
+              </div>
+            )}
+            <div className="mt-3 grid grid-cols-4 gap-3">
+              {shownBrands.map((b) => (
+                <button key={b.id} type="button" onClick={() => pickBrand(b)} className="flex flex-col items-center gap-1.5 active:scale-95">
+                  <BrandTile icon={`brand:${b.id}`} size={52} className={icon === `brand:${b.id}` ? "ring-2 ring-brand-600 ring-offset-2 ring-offset-raised" : ""} />
+                  <span className="w-full truncate text-center text-[12px] text-ink-soft">{b.name}</span>
+                </button>
+              ))}
+              {shownBrands.length === 0 && <p className="col-span-4 py-3 text-center text-[14px] text-ink-soft">{t("Tidak ketemu. Pakai Unggah untuk logo sendiri.")}</p>}
+            </div>
+            <p className="mt-3 text-[12px] leading-snug text-ink-mute">{t("Badge merek bukan logo resmi. Untuk logo asli, gunakan Unggah.")}</p>
+          </div>
+        )}
       </div>
 
       <div>
