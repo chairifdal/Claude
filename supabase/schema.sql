@@ -407,6 +407,18 @@ create policy budgets_all on public.budgets for all to authenticated
 grant select on public.account_balances to authenticated;
 grant execute on function public.respond_invite(uuid, boolean) to authenticated;
 revoke execute on function public.seed_default_categories(uuid) from public, anon, authenticated;
+-- Fungsi trigger tidak perlu dipanggil langsung lewat API
+revoke execute on function public.handle_new_user()      from public, anon, authenticated;
+revoke execute on function public.tx_before_write()      from public, anon, authenticated;
+revoke execute on function public.invite_before_insert() from public, anon, authenticated;
+-- Helper RLS & RPC hanya untuk user yang login
+revoke execute on function public.is_account_owner(uuid)        from public, anon;
+revoke execute on function public.can_read_account(uuid)        from public, anon;
+revoke execute on function public.can_write_account(uuid)       from public, anon;
+revoke execute on function public.is_connected(uuid)            from public, anon;
+revoke execute on function public.respond_invite(uuid, boolean) from public, anon;
+grant  execute on function public.is_account_owner(uuid), public.can_read_account(uuid),
+                           public.can_write_account(uuid), public.is_connected(uuid) to authenticated;
 
 -- =====================================================================
 -- REALTIME — perubahan langsung terlihat di HP pasangan
