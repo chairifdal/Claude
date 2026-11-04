@@ -227,7 +227,7 @@ function SharePanel({ account, isOwner, onLeft }) {
           <label htmlFor="invite-email" className="label">{t("Pasangan")}</label>
           <select id="invite-email" className="field" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!candidates.length}>
             <option value="">{candidates.length ? t("Pilih pasangan") : t("Belum ada pengguna lain")}</option>
-            {candidates.map((c) => <option key={c.id} value={c.email}>{c.full_name ? `${c.full_name} (${c.email})` : c.email}</option>)}
+            {candidates.map((c) => <option key={c.id} value={c.email}>{c.full_name || c.email}</option>)}
           </select>
           <p className="text-[14px] text-ink-soft">{candidates.length ? t("Pilih dari pengguna yang sudah mendaftar di aplikasi ini.") : t("Minta pasanganmu mendaftar di aplikasi ini dulu, lalu dia akan muncul di daftar.")}</p>
           <div role="radiogroup" aria-label={t("Jenis akses")} className="space-y-2">
