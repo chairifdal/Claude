@@ -1,206 +1,265 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Shapes, Eye, EyeOff, Settings, ChevronRight, Sparkles, PieChart, Plus, MailOpen } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Shapes, Eye, EyeOff, Settings, ChevronRight, UserPlus } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
-import { monthRange, firstName, monthLabel } from "@/lib/format";
+import { monthRange, firstName, formatIDR } from "@/lib/format";
 import { AccountGlyph, Avatar, Money, Empty } from "@/components/ui";
 import { TxGroupedList } from "@/components/TxList";
+import { Mark } from "@/components/AppChrome";
 
 export default function HomePage() {
-  const { profile, accounts, hidden, toggleHidden, openTx, openAccount, categoryById, invites, user, loading } = useApp();
+  const { profile, people, accounts, hidden, toggleHidden, openTx, openAccount, categoryById, invites, user, loading, budgets, supabase, notify, refresh } = useApp();
   const { start, end } = useMemo(() => monthRange(), []);
-  const { rows: monthRows } = useTransactions({ from: start, to: end });
-  const { rows: recent } = useTransactions({ limit: 6 });
+  const { rows: monthRows } = useTransactions({ from: start, to: end, limit: 3000 });
+  const { rows: recent } = useTransactions({ limit: 5 });
 
+  const partner = Object.values(people).find((p) => p.id !== user?.id);
   const liquid = accounts.filter((a) => ["cash", "bank", "ewallet"].includes(a.kind));
   const totalLiquid = liquid.reduce((s, a) => s + a.balance, 0);
+  const isShared = (a) => a && (a.owner_id !== user?.id || a.member_count > 0);
 
-  const stats = useMemo(() => {
-    let income = 0, expense = 0;
+  const m = useMemo(() => {
+    let income = 0, expense = 0, mine = 0, shared = 0, partnerSpent = 0;
+    const byPersonShared = {};
     const byRoot = {};
-    const byPerson = {};
     for (const t of monthRows) {
       if (t.type === "income") income += t.amount;
-      if (t.type === "expense") {
-        expense += t.amount;
-        const root = rootCategory(categoryById[t.category_id], categoryById);
-        const key = root?.name || "Tanpa kategori";
-        byRoot[key] = byRoot[key] || { name: key, color: root?.color || "#94A3B8", total: 0 };
-        byRoot[key].total += t.amount;
-        byPerson[t.created_by] = (byPerson[t.created_by] || 0) + t.amount;
-      }
+      if (t.type !== "expense") continue;
+      expense += t.amount;
+      const acc = accounts.find((a) => a.id === t.account_id);
+      if (isShared(acc)) {
+        shared += t.amount;
+        byPersonShared[t.created_by] = (byPersonShared[t.created_by] || 0) + t.amount;
+      } else mine += t.amount;
+      if (t.created_by !== user?.id) partnerSpent += t.amount;
+      const root = rootCategory(categoryById[t.category_id], categoryById);
+      const key = root?.id || "none";
+      byRoot[key] = byRoot[key] || { id: key, name: root?.name || "Tanpa kategori", total: 0 };
+      byRoot[key].total += t.amount;
     }
-    const comp = Object.values(byRoot).sort((a, b) => b.total - a.total);
-    return { income, expense, comp, byPerson };
-  }, [monthRows, categoryById]);
+    const roots = Object.values(byRoot).sort((a, b) => b.total - a.total);
+    return { income, expense, mine, shared, partnerSpent, byPersonShared, roots };
+  }, [monthRows, accounts, categoryById, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const top = stats.comp[0];
-  const partnerSpend = Object.entries(stats.byPerson).filter(([id]) => id !== user?.id);
+  const finding = useMemo(() => {
+    const daysLeft = new Date(end - 1).getDate() - new Date().getDate() + 1;
+    const worst = budgets
+      .map((b) => ({ b, cat: categoryById[b.category_id], spent: m.roots.find((r) => r.id === b.category_id)?.total || 0 }))
+      .filter((x) => x.cat)
+      .map((x) => ({ ...x, ratio: x.spent / x.b.amount }))
+      .sort((a, b) => b.ratio - a.ratio)[0];
+    if (worst && worst.ratio >= 1) return `${worst.cat.name} lewat ${hidden ? "anggaran" : formatIDR(worst.spent - worst.b.amount)} dari anggaran, ${daysLeft} hari lagi bulan ini`;
+    if (worst && worst.ratio >= 0.8) return `${worst.cat.name} sudah ${Math.round(worst.ratio * 100)}% dari anggaran, ${daysLeft} hari lagi bulan ini`;
+    if (m.roots[0]) return `Terbesar bulan ini: ${m.roots[0].name}, ${Math.round((m.roots[0].total / m.expense) * 100)}% dari pengeluaran`;
+    return "Belum ada pengeluaran bulan ini";
+  }, [budgets, categoryById, m, end, hidden]);
+
+  async function respond(inv, accept) {
+    const { error } = await supabase.rpc("respond_invite", { invite_id: inv.id, accept });
+    if (error) return notify(error.message, "err");
+    notify(accept ? `Kamu bergabung ke ${inv.account_name}` : "Undangan ditolak");
+    refresh();
+  }
+
+  const topRoots = m.roots.slice(0, 5);
+  const maxRoot = topRoots[0]?.total || 1;
 
   return (
     <div className="pt-safe">
-      {/* Header */}
-      <header className="flex h-16 items-center gap-3">
-        <Avatar profile={profile} size={40} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-semibold text-ink-mute">{greeting()},</p>
-          <p className="truncate text-[18px] font-extrabold leading-tight tracking-tight">{firstName(profile) || "…"}</p>
-        </div>
-        <button className="icon-btn" onClick={toggleHidden} aria-label="Sembunyikan saldo">
-          {hidden ? <EyeOff className="h-[21px] w-[21px]" /> : <Eye className="h-[21px] w-[21px]" />}
+      {/* Bar produk: nama, lingkup (pasangan), utilitas */}
+      <div className="flex h-14 items-center gap-2.5 lg:hidden">
+        <Mark size={28} />
+        <span className="text-[16px] font-semibold">Kantong Kita</span>
+        <span className="ml-1 flex -space-x-1.5">
+          <Avatar profile={profile} size={24} />
+          {partner && <Avatar profile={partner} size={24} />}
+        </span>
+        <span className="flex-1" />
+        <button className="icon-btn" onClick={toggleHidden} aria-label={hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}>
+          {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
         </button>
-        <Link href="/pengaturan" className="icon-btn relative" aria-label="Pengaturan">
-          <Settings className="h-[21px] w-[21px]" />
-          {invites.length > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-expense ring-2 ring-canvas" />}
+        <Link href="/pengaturan" className="icon-btn relative -mr-2" aria-label="Pengaturan">
+          <Settings className="h-5 w-5" />
+          {invites.length > 0 && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-expense" />}
         </Link>
+      </div>
+
+      <header className="mb-5 mt-2 flex items-end gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[28px] font-semibold leading-tight">Beranda</h1>
+          <p className="mt-1 text-[16px] text-ink-soft">{loading ? "Memuat…" : finding}</p>
+        </div>
+        <button className="icon-btn hidden lg:grid" onClick={toggleHidden} aria-label={hidden ? "Tampilkan saldo" : "Sembunyikan saldo"}>
+          {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
       </header>
 
-      {/* Invitation banner */}
-      {invites.length > 0 && (
-        <Link href="/pengaturan#undangan" className="mb-3 flex animate-pop-in items-center gap-3 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-200">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-amber-400 text-white"><MailOpen className="h-5 w-5" /></span>
-          <p className="flex-1 text-[13.5px] font-semibold text-amber-900">
-            {invites[0].inviter_name} mengundang kamu ke <b>{invites[0].account_name}</b>
-            {invites.length > 1 ? ` dan ${invites.length - 1} lainnya` : ""}
+      {invites.map((inv) => (
+        <div key={inv.id} className="mb-4 flex flex-wrap items-center gap-3 rounded-card border border-warn-line bg-warn-soft p-4">
+          <p className="min-w-0 flex-1 text-[16px] text-warn-ink">
+            <b className="font-semibold">{inv.inviter_name}</b> mengundang kamu ke <b className="font-semibold">{inv.account_name}</b>
           </p>
-          <ChevronRight className="h-5 w-5 text-amber-700" />
-        </Link>
-      )}
-
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-900 p-5 text-white shadow-lift">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-white/[.06]" />
-        <p className="relative text-[12px] font-bold uppercase tracking-[.14em] text-white/70">Saldo tersedia</p>
-        <Money value={totalLiquid} className="relative mt-1 block text-[34px] font-extrabold leading-tight tracking-tight" />
-        <p className="relative text-[13px] text-white/70">di {liquid.length} akun lancar</p>
-
-        <div className="relative mt-5 grid grid-cols-4 gap-2 border-t border-white/15 pt-4">
-          <QuickAction icon={ArrowUpRight} label="Keluar" onClick={() => openTx({ type: "expense" })} primary />
-          <QuickAction icon={ArrowDownLeft} label="Masuk" onClick={() => openTx({ type: "income" })} />
-          <QuickAction icon={ArrowLeftRight} label="Transfer" onClick={() => openTx({ type: "transfer" })} />
-          <QuickAction icon={Shapes} label="Kategori" href="/kategori" />
-        </div>
-
-        <div className="relative mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-            <p className="flex items-center gap-1 text-[12px] text-white/75"><ArrowDownLeft className="h-3.5 w-3.5" /> Pemasukan</p>
-            <Money value={stats.income} compact className="mt-0.5 block text-[17px] font-extrabold" dots={5} />
-          </div>
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
-            <p className="flex items-center gap-1 text-[12px] text-white/75"><ArrowUpRight className="h-3.5 w-3.5" /> Pengeluaran</p>
-            <Money value={stats.expense} compact className="mt-0.5 block text-[17px] font-extrabold" dots={5} />
+          <div className="flex gap-2">
+            <button className="h-10 rounded-full px-4 text-[14px] font-medium text-warn-ink" onClick={() => respond(inv, false)}>Tolak</button>
+            <button className="h-10 rounded-full bg-ink px-4 text-[14px] font-semibold text-white" onClick={() => respond(inv, true)}>Terima</button>
           </div>
         </div>
-      </section>
+      ))}
 
-      {/* Composition */}
-      <section className="card mt-4 p-4">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-50 text-brand-600"><PieChart className="h-5 w-5" /></span>
-          <div className="flex-1">
-            <p className="font-extrabold">Komposisi pengeluaran</p>
-            <p className="text-[12px] text-ink-mute">{monthLabel(new Date())}</p>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          {/* Jawaban utama: saldo */}
+          <section className="card p-6">
+            <p className="text-[16px] text-ink-soft">Saldo tersedia di {liquid.length} akun lancar</p>
+            <Money value={totalLiquid} className="mt-1 block text-[34px] font-semibold leading-tight" />
+            <p className="mt-2 text-[16px] leading-relaxed text-ink-soft">
+              Bulan ini <Money value={m.income} sign className="font-medium text-income" dots={5} /> masuk, <Money value={m.expense} className="font-medium text-ink" dots={5} /> keluar
+            </p>
+          </section>
+
+          <div className="grid grid-cols-4 gap-3">
+            <ActionTile icon={ArrowUpRight} label="Keluar" bg="#eef1f4" ink="#1b1d1f" onClick={() => openTx({ type: "expense" })} />
+            <ActionTile icon={ArrowDownLeft} label="Masuk" bg="#dcfae5" ink="#04250e" onClick={() => openTx({ type: "income" })} />
+            <ActionTile icon={ArrowLeftRight} label="Transfer" bg="#dcf1ff" ink="#0a3a80" onClick={() => openTx({ type: "transfer" })} />
+            <ActionTile icon={Shapes} label="Kategori" bg="#eef1f4" ink="#1b1d1f" href="/kategori" />
           </div>
-          <Link href="/analisis" className="chip bg-brand-50 text-brand-600">Detail</Link>
-        </div>
-        {stats.comp.length ? (
-          <>
-            <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full">
-              {stats.comp.map((c) => (
-                <div key={c.name} style={{ width: `${(c.total / stats.expense) * 100}%`, background: c.color }} className="min-w-[4px]" />
-              ))}
+
+          {/* Elemen khas: kita berdua */}
+          <section className="card p-6">
+            <div className="flex items-baseline justify-between">
+              <h2 className="section-title">Kita bulan ini</h2>
+              <span className="text-[14px] text-ink-soft">pengeluaran</span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
-              {stats.comp.slice(0, 6).map((c) => (
-                <p key={c.name} className="flex items-center gap-2 truncate text-[13px] text-ink-soft">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} />
-                  <span className="truncate">{c.name}</span>
-                  <b className="ml-auto text-ink">{Math.round((c.total / stats.expense) * 100)}%</b>
+            <div className="mt-3 grid grid-cols-1 divide-y divide-rule sm:mt-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:divide-line">
+              <Lane label="Pribadi saya" value={m.mine} person={profile} />
+              <Lane label="Akun bersama" value={m.shared} />
+              {partner
+                ? <Lane label={`Dicatat ${firstName(partner)}`} value={m.partnerSpent} person={partner} />
+                : <Lane label="Pasangan" value={null} />}
+            </div>
+            {partner && m.shared > 0 && (
+              <div className="mt-5">
+                <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+                  {Object.entries(m.byPersonShared).sort().map(([pid, v]) => (
+                    <SharePart key={pid} pid={pid} ratio={v / m.shared} />
+                  ))}
+                </div>
+                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-ink-soft">
+                  {Object.entries(m.byPersonShared).sort().map(([pid, v]) => (
+                    <span key={pid} className="flex items-center gap-1.5">
+                      <Avatar profile={people[pid]} size={18} /> {firstName(people[pid])} {Math.round((v / m.shared) * 100)}%
+                    </span>
+                  ))}
+                  <span>dari akun bersama</span>
                 </p>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="mt-3 text-sm text-ink-mute">Belum ada pengeluaran bulan ini.</p>
-        )}
-      </section>
-
-      {/* Insight */}
-      {top && (
-        <section className="mt-3 flex gap-3 rounded-3xl bg-gradient-to-br from-emerald-50 to-teal-50 p-4 ring-1 ring-emerald-100">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"><Sparkles className="h-5 w-5" /></span>
-          <div className="text-[13.5px] leading-relaxed text-emerald-950">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700">Insight bulan ini</p>
-            Pengeluaran terbesar: <b>{top.name}</b>, <Money value={top.total} className="font-bold" dots={5} /> ({Math.round((top.total / stats.expense) * 100)}% dari total).
-            {partnerSpend.length > 0 && (
-              <> Pasanganmu ikut mencatat <Money value={partnerSpend.reduce((s, [, v]) => s + v, 0)} className="font-bold" dots={5} /> di akun bersama.</>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Accounts */}
-      <section className="mt-6">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="section-title">Akun kamu</h2>
-          <Link href="/dompet" className="flex items-center text-[13px] font-bold text-brand-600">Dompet <ChevronRight className="h-4 w-4" /></Link>
-        </div>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 no-scrollbar">
-          {accounts.map((a) => (
-            <Link key={a.id} href={`/dompet/${a.id}`} className="card flex w-[148px] shrink-0 flex-col p-4 transition active:scale-[.98]">
-              <div className="flex items-center justify-between">
-                <AccountGlyph account={a} size={38} />
-                {a.owner_id !== user?.id && <span className="chip bg-brand-50 px-2 py-0.5 text-[10.5px] text-brand-600">Bersama</span>}
               </div>
-              <p className="mt-3 truncate text-[14px] font-bold">{a.name}</p>
-              <Money value={a.balance} compact className="text-[15px] font-extrabold" dots={5} />
-            </Link>
-          ))}
-          <button onClick={() => openAccount({})}
-            className="flex w-[120px] shrink-0 flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-line text-[13px] font-bold text-ink-mute">
-            <Plus className="h-6 w-6" /> Tambah
-          </button>
-        </div>
-      </section>
+            )}
+            {!partner && (
+              <Link href="/dompet" className="mt-4 inline-flex items-center gap-2 text-[16px] font-medium text-brand-700">
+                <UserPlus className="h-4 w-4" /> Bagikan akun ke pasangan
+              </Link>
+            )}
+          </section>
 
-      {/* Recent */}
-      <section className="mt-5">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="section-title">Aktivitas terkini</h2>
-          <Link href="/aktivitas" className="flex items-center text-[13px] font-bold text-brand-600">Lihat semua <ChevronRight className="h-4 w-4" /></Link>
+          {/* Ke mana uangnya */}
+          <section className="card p-6">
+            <div className="flex items-baseline justify-between">
+              <h2 className="section-title">Ke mana uangnya</h2>
+              <Link href="/analisis" className="text-[14px] font-medium text-brand-700">Analisis</Link>
+            </div>
+            {topRoots.length ? (
+              <ul className="mt-4 space-y-3">
+                {topRoots.map((r, i) => (
+                  <li key={r.id}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[16px]">{r.name}</span>
+                      <span className="flex-none text-right">
+                        <Money value={r.total} className="text-[16px] font-medium" dots={5} />
+                        <span className="tabular ml-2 inline-block w-10 text-[14px] text-ink-soft">{Math.round((r.total / m.expense) * 100)}%</span>
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-rule">
+                      <div className={`h-full rounded-full ${i === 0 ? "bg-brand-600" : "bg-[#b9c2cc]"}`} style={{ width: `${(r.total / maxRoot) * 100}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-4"><Empty title="Belum ada pengeluaran bulan ini" text="Catatan pertama akan muncul di sini, dikelompokkan per kategori." /></div>
+            )}
+          </section>
         </div>
-        {!loading && accounts.length === 0 ? (
-          <div className="card">
-            <Empty icon={Plus} title="Mulai dengan membuat akun" text="Tambahkan rekening bank, e-wallet, atau dompet tunai."
-              action={<button className="btn-primary" onClick={() => openAccount({})}>Buat akun pertama</button>} />
-          </div>
-        ) : (
-          <TxGroupedList rows={recent} />
-        )}
-      </section>
+
+        <div className="min-w-0 space-y-6">
+          <section>
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="section-title">Akun</h2>
+              <Link href="/dompet" className="flex items-center text-[14px] font-medium text-brand-700">Dompet <ChevronRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="card p-1">
+              {accounts.slice(0, 5).map((a) => (
+                <Link key={a.id} href={`/dompet/${a.id}`} className="flex min-h-[64px] items-center gap-3 rounded-control px-3 py-2.5 hover:bg-canvas">
+                  <AccountGlyph account={a} size={40} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16px] font-medium">{a.name}</span>
+                    <span className="block truncate text-[14px] text-ink-soft">
+                      {a.owner_id !== user?.id ? `Milik ${firstName(people[a.owner_id])}` : a.member_count > 0 ? "Bersama" : "Pribadi"}
+                    </span>
+                  </span>
+                  <Money value={a.balance} className="flex-none text-[16px] font-medium" dots={5} />
+                </Link>
+              ))}
+              {!loading && accounts.length === 0 && (
+                <div className="p-3"><Empty title="Belum ada akun" text="Tambahkan rekening, e-wallet, atau dompet tunai."
+                  action={<button className="btn-primary h-10 text-[14px]" onClick={() => openAccount({})}>Buat akun</button>} /></div>
+              )}
+              {accounts.length > 5 && (
+                <Link href="/dompet" className="block px-3 py-3 text-[14px] font-medium text-brand-700">Lihat {accounts.length} akun</Link>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-baseline justify-between">
+              <h2 className="section-title">Terakhir dicatat</h2>
+              <Link href="/aktivitas" className="flex items-center text-[14px] font-medium text-brand-700">Semua <ChevronRight className="h-4 w-4" /></Link>
+            </div>
+            <TxGroupedList rows={recent} />
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick, href, primary }) {
+function ActionTile({ icon: Icon, label, onClick, href, bg, ink }) {
   const inner = (
     <>
-      <span className={`grid h-12 w-12 place-items-center rounded-full transition ${primary ? "bg-white text-brand-600 shadow-lg" : "bg-white/15 text-white ring-1 ring-white/20"}`}>
-        <Icon className="h-5 w-5" strokeWidth={2.4} />
-      </span>
-      <span className="text-[12.5px] font-bold">{label}</span>
+      <Icon className="h-6 w-6" strokeWidth={1.75} />
+      <span className="text-[14px] font-medium">{label}</span>
     </>
   );
-  const cls = "flex flex-col items-center gap-1.5 active:scale-95 transition";
-  return href ? <Link href={href} className={cls}>{inner}</Link> : <button onClick={onClick} className={cls}>{inner}</button>;
+  const cls = "flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-card transition active:scale-[.97]";
+  const style = { background: bg, color: ink };
+  return href ? <Link href={href} className={cls} style={style}>{inner}</Link> : <button onClick={onClick} className={cls} style={style}>{inner}</button>;
 }
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 11) return "Selamat pagi";
-  if (h < 15) return "Selamat siang";
-  if (h < 18) return "Selamat sore";
-  return "Selamat malam";
+function Lane({ label, value, person }) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 py-2.5 sm:block sm:px-4 sm:py-0 sm:first:pl-0">
+      <p className="flex min-w-0 items-center gap-1.5 text-[16px] text-ink-soft sm:text-[14px]">
+        {person && <Avatar profile={person} size={20} />}<span className="truncate">{label}</span>
+      </p>
+      {value === null
+        ? <span className="text-[16px] text-ink-mute sm:block sm:text-[20px]">—</span>
+        : <Money value={value} compact className="text-[16px] font-medium sm:block sm:text-[20px]" dots={4} />}
+    </div>
+  );
+}
+
+function SharePart({ pid, ratio }) {
+  const { personHue } = useApp();
+  const h = personHue(pid);
+  return <div style={{ width: `${ratio * 100}%`, background: `hsl(${h} 70% 72%)` }} />;
 }

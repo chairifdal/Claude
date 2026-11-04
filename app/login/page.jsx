@@ -35,46 +35,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-5 pt-safe">
-      <div className="relative -mx-5 overflow-hidden rounded-b-[2.5rem] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-900 px-6 pb-12 pt-16 text-white">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-white/5" />
-        <img src="/icons/icon.svg" alt="" className="h-14 w-14 rounded-2xl shadow-lg ring-1 ring-white/30" />
-        <h1 className="mt-6 text-[32px] font-extrabold leading-[1.1] tracking-tight">
-          Keuangan berdua,<br />satu kantong.
-        </h1>
-        <p className="mt-3 max-w-[18rem] text-[15px] text-white/75">
-          Bagikan rekening & pocket ke pasangan, catat bareng, dan lihat perubahannya seketika.
-        </p>
+    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4 pt-safe">
+      <div className="flex h-16 items-center gap-2.5">
+        <img src="/icons/icon.svg" alt="" width={32} height={32} className="rounded-[9px]" />
+        <span className="text-[16px] font-semibold">Kantong Kita</span>
       </div>
 
-      <div className="-mt-6 card relative p-2">
-        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-canvas p-1">
+      <h1 className="mt-10 text-[32px] font-semibold leading-[1.15]">Keuangan berdua, satu kantong</h1>
+      <p className="mt-3 text-[16px] leading-relaxed text-ink-soft">
+        Bagikan rekening dan pocket ke pasangan, catat bareng, dan lihat setiap catatan muncul di HP masing-masing saat itu juga.
+      </p>
+
+      <div className="card mt-8 p-5">
+        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-full bg-[#eef1f4] p-1">
           {[["login", "Masuk"], ["signup", "Daftar"]].map(([k, l]) => (
-            <button key={k} type="button" onClick={() => { setMode(k); setMsg(null); }}
-              className={`rounded-xl py-2.5 text-sm font-bold transition ${mode === k ? "bg-white text-ink shadow-card" : "text-ink-mute"}`}>
+            <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => { setMode(k); setMsg(null); }}
+              className={`h-10 rounded-full text-[14px] font-medium transition ${mode === k ? "border border-line bg-white text-ink" : "text-ink-soft"}`}>
               {l}
             </button>
           ))}
         </div>
 
-        <form onSubmit={submit} className="space-y-3 p-3 pt-4">
+        <form onSubmit={submit} className="mt-5 space-y-4">
           {mode === "signup" && (
-            <Field icon={User}>
-              <input className="field pl-11" placeholder="Nama panggilan" value={name} onChange={(e) => setName(e.target.value)} required />
-            </Field>
+            <div>
+              <label htmlFor="name" className="label">Nama panggilan</label>
+              <Field icon={User}><input id="name" className="field pl-11" value={name} onChange={(e) => setName(e.target.value)} required /></Field>
+            </div>
           )}
-          <Field icon={Mail}>
-            <input className="field pl-11" type="email" inputMode="email" autoComplete="email" placeholder="Email"
-              value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </Field>
-          <Field icon={Lock}>
-            <input className="field pl-11" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"}
-              placeholder="Password (min. 6 karakter)" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </Field>
+          <div>
+            <label htmlFor="email" className="label">Email</label>
+            <Field icon={Mail}>
+              <input id="email" className="field pl-11" type="email" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+          </div>
+          <div>
+            <label htmlFor="password" className="label">Password</label>
+            <Field icon={Lock}>
+              <input id="password" aria-describedby="pw-hint" className="field pl-11" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"}
+                minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </Field>
+            {mode === "signup" && <p id="pw-hint" className="mt-1.5 text-[14px] text-ink-soft">Minimal 6 karakter</p>}
+          </div>
 
           {msg && (
-            <p className={`rounded-xl px-3 py-2.5 text-sm font-medium ${msg.tone === "err" ? "bg-expense-soft text-expense" : "bg-income-soft text-income"}`}>
+            <p role="alert" className={`rounded-control border px-3 py-2.5 text-[14px] ${msg.tone === "err" ? "border-[#f5c2bd] bg-expense-soft text-expense-ink" : "border-[#b7e9c6] bg-income-soft text-income-ink"}`}>
               {msg.text}
             </p>
           )}
@@ -84,7 +89,7 @@ export default function LoginPage() {
           </button>
         </form>
       </div>
-      <p className="mt-6 text-center text-xs text-ink-mute">Pasangan kamu daftar dengan emailnya sendiri, lalu kamu undang dari halaman akun.</p>
+      <p className="mt-5 text-[14px] text-ink-soft">Pasanganmu daftar dengan emailnya sendiri, lalu kamu undang dari halaman akun.</p>
     </main>
   );
 }
@@ -92,7 +97,7 @@ export default function LoginPage() {
 function Field({ icon: Icon, children }) {
   return (
     <div className="relative">
-      <Icon className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-mute" />
+      <Icon className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-soft" />
       {children}
     </div>
   );

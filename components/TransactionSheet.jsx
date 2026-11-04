@@ -6,9 +6,9 @@ import { groupDigits, parseAmount, toLocalInput, formatIDR, firstName } from "@/
 import { AccountGlyph, CategoryIcon, Money, Segmented, Sheet } from "./ui";
 
 const TYPES = [
-  { value: "expense", label: "Pengeluaran", activeClass: "text-expense" },
-  { value: "income", label: "Pemasukan", activeClass: "text-income" },
-  { value: "transfer", label: "Transfer", activeClass: "text-transfer" },
+  { value: "expense", label: "Pengeluaran" },
+  { value: "income", label: "Pemasukan" },
+  { value: "transfer", label: "Transfer" },
 ];
 
 const QUICK = [10000, 20000, 50000, 100000];
@@ -97,29 +97,29 @@ function TxForm({ init }) {
   }
 
   if (!writable.length) {
-    return <p className="py-8 text-center text-sm text-ink-mute">Buat akun dulu (atau minta akses "Bisa catat") sebelum mencatat transaksi.</p>;
+    return <p className="py-8 text-center text-[16px] text-ink-soft">Buat akun dulu (atau minta akses "Bisa catat") sebelum mencatat transaksi.</p>;
   }
 
-  const tone = type === "income" ? "text-income" : type === "transfer" ? "text-transfer" : "text-expense";
+  const tone = type === "income" ? "text-income" : "text-ink";
 
   return (
     <div className="space-y-5 pb-2">
       <Segmented value={type} onChange={setType} options={TYPES} />
 
       {/* Amount */}
-      <div className="rounded-3xl bg-canvas px-4 py-5 text-center">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-mute">Jumlah</p>
+      <div className="rounded-card bg-raised px-4 py-5 text-center">
+        <label htmlFor="tx-amount" className="text-[14px] text-ink-soft">Jumlah</label>
         <div className={`mt-1 flex items-baseline justify-center gap-1.5 ${tone}`}>
-          <span className="text-2xl font-extrabold">Rp</span>
-          <input autoFocus={!editing} inputMode="numeric" placeholder="0" value={amount}
+          <span className="text-2xl font-semibold">Rp</span>
+          <input id="tx-amount" autoFocus={!editing} inputMode="numeric" placeholder="0" value={amount}
             onChange={(e) => setAmount(groupDigits(e.target.value))}
-            className="tabular w-full max-w-[240px] bg-transparent text-left text-[40px] font-extrabold leading-none tracking-tight outline-none placeholder:text-ink-mute/40"
-            style={{ width: `${Math.max(1, amount.length) * 0.62 + 0.4}em`, fontSize: amount.length > 11 ? 30 : 40 }} />
+            className="tabular w-full max-w-[240px] bg-transparent text-left text-[36px] font-semibold leading-none outline-none placeholder:text-ink-mute"
+            style={{ width: `${Math.max(1, amount.length) * 0.62 + 0.4}em`, fontSize: amount.length > 11 ? 28 : 36 }} />
         </div>
         <div className="mt-3 flex justify-center gap-1.5">
           {QUICK.map((q) => (
             <button key={q} type="button" onClick={() => setAmount(groupDigits(String(value + q)))}
-              className="chip bg-white text-ink-soft shadow-card">+{formatIDR(q, { compact: true }).replace("Rp ", "")}</button>
+              className="chip h-9 border border-control bg-white text-ink">+{formatIDR(q, { compact: true }).replace("Rp ", "")}</button>
           ))}
         </div>
       </div>
@@ -132,46 +132,44 @@ function TxForm({ init }) {
 
       {type === "transfer" && (
         <div>
-          <div className="-mt-2 mb-2 flex justify-center">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-transfer-soft text-transfer"><ArrowDown className="h-4 w-4" /></span>
-          </div>
+          <ArrowDown className="mx-auto -mt-2 mb-2 h-5 w-5 text-ink-soft" aria-hidden="true" />
           <span className="label">Ke akun</span>
           {mineDest.length > 0 && <AccountScroller list={mineDest} value={toAccountId} onChange={setToAccountId} people={people} userId={user?.id} />}
           {sharedDest.length > 0 && (
             <>
-              <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-ink-mute"><Users className="h-3.5 w-3.5" /> Akun pasangan yang dibagikan</p>
+              <p className="mb-2 mt-4 flex items-center gap-1.5 text-[14px] text-ink-soft"><Users className="h-3.5 w-3.5" /> Akun pasangan yang dibagikan</p>
               <AccountScroller list={sharedDest} value={toAccountId} onChange={setToAccountId} people={people} userId={user?.id} />
             </>
           )}
-          {!destinations.length && <p className="text-sm text-ink-mute">Belum ada akun tujuan.</p>}
+          {!destinations.length && <p className="text-[14px] text-ink-soft">Belum ada akun tujuan.</p>}
         </div>
       )}
 
       {/* Categories */}
       {type !== "transfer" && (
         <div>
-          <span className="label">Kategori {from && from.owner_id !== user?.id && <span className="normal-case tracking-normal">· milik {firstName(people[from.owner_id])}</span>}</span>
+          <span className="label">Kategori {from && from.owner_id !== user?.id && <span className="font-normal text-ink-soft">· milik {firstName(people[from.owner_id])}</span>}</span>
           <div className="grid grid-cols-4 gap-2">
             {roots.map((c) => {
               const active = activeRootId === c.id;
               return (
                 <button key={c.id} type="button" onClick={() => setCategoryId(c.id)}
-                  className={`flex flex-col items-center gap-1.5 rounded-2xl p-2 transition ${active ? "bg-white shadow-card ring-2" : "hover:bg-canvas"}`}
-                  style={active ? { "--tw-ring-color": c.color } : undefined}>
+                  aria-pressed={active}
+                  className={`flex flex-col items-center gap-1.5 rounded-control border p-2 transition ${active ? "border-ink bg-white" : "border-transparent hover:bg-canvas"}`}>
                   <CategoryIcon category={c} size={42} />
-                  <span className="line-clamp-2 text-center text-[11.5px] font-semibold leading-tight">{c.name}</span>
+                  <span className="line-clamp-2 text-center text-[13px] font-medium leading-tight">{c.name}</span>
                 </button>
               );
             })}
           </div>
           {children.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5 rounded-2xl bg-canvas p-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {children.map((c) => {
                 const active = categoryId === c.id;
                 return (
                   <button key={c.id} type="button" onClick={() => setCategoryId(active ? c.parent_id : c.id)}
-                    className={`chip ${active ? "text-white" : "bg-white text-ink-soft"}`}
-                    style={active ? { background: c.color } : undefined}>
+                    aria-pressed={active}
+                    className={`chip h-10 border ${active ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>
                     {active && <Check className="h-3.5 w-3.5" />} {c.name}
                   </button>
                 );
@@ -183,12 +181,12 @@ function TxForm({ init }) {
 
       <div className="grid grid-cols-1 gap-3">
         <div>
-          <span className="label">Waktu</span>
-          <input type="datetime-local" className="field" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
+          <label htmlFor="tx-time" className="label">Waktu</label>
+          <input id="tx-time" type="datetime-local" className="field" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
         </div>
         <div>
-          <span className="label">Catatan</span>
-          <input className="field" placeholder="Opsional, mis. makan siang bareng" value={note} onChange={(e) => setNote(e.target.value)} />
+          <label htmlFor="tx-note" className="label">Catatan <span className="font-normal text-ink-soft">(opsional)</span></label>
+          <input id="tx-note" className="field" placeholder="mis. makan siang bareng" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
       </div>
 
@@ -216,11 +214,12 @@ function AccountScroller({ list, value, onChange, people, userId }) {
         const shared = a.owner_id !== userId;
         return (
           <button key={a.id} type="button" onClick={() => onChange(a.id)}
-            className={`flex min-w-[150px] items-center gap-2.5 rounded-2xl border-2 p-2.5 pr-3.5 text-left transition ${active ? "border-brand-500 bg-brand-50" : "border-line bg-white"}`}>
+            aria-pressed={active}
+            className={`flex min-w-[156px] flex-none items-center gap-2.5 rounded-control border p-2.5 pr-3.5 text-left transition ${active ? "border-ink bg-white ring-1 ring-ink" : "border-line bg-white"}`}>
             <AccountGlyph account={a} size={36} />
             <span className="min-w-0">
-              <span className="block truncate text-[13.5px] font-bold">{a.name}</span>
-              <span className="block truncate text-[11.5px] text-ink-mute">
+              <span className="block truncate text-[16px] font-medium">{a.name}</span>
+              <span className="block truncate text-[14px] text-ink-soft">
                 {shared ? `Milik ${firstName(people[a.owner_id])}` : <Money value={a.balance} compact dots={4} />}
               </span>
             </span>

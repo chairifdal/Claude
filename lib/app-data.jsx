@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getSupabase } from "./supabase";
 
 const Ctx = createContext(null);
+const PERSON_HUES = [212, 338, 150, 32];
 
 export function AppDataProvider({ children }) {
   const supabase = getSupabase();
@@ -92,7 +93,11 @@ export function AppDataProvider({ children }) {
     const active = accounts.filter((a) => !a.archived);
     const byId = Object.fromEntries(accounts.map((a) => [a.id, a]));
     const catById = Object.fromEntries(categories.map((c) => [c.id, c]));
+    // Hue tetap per orang (urutan id stabil di kedua HP), minimal 60° berjauhan
+    const order = Object.keys(people).sort();
+    const personHue = (id) => PERSON_HUES[Math.max(0, order.indexOf(id)) % PERSON_HUES.length];
     return {
+      personHue,
       supabase, user, profile, people, accounts: active, allAccounts: accounts, accountById: byId,
       categories, categoryById: catById, invites, budgets, loading, version,
       hidden, toggleHidden, refresh, notify, toast,

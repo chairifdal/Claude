@@ -84,7 +84,7 @@ function AccountForm({ account }) {
             const active = kind === k;
             return (
               <button key={k} type="button" onClick={() => setKind(k)}
-                className={`flex flex-col items-center gap-1 rounded-2xl border-2 px-2 py-3 text-[12px] font-bold transition ${active ? "border-brand-500 bg-brand-50 text-brand-700" : "border-line text-ink-soft"}`}>
+                aria-pressed={active} className={`flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-[14px] font-medium transition ${active ? "border-ink bg-white ring-1 ring-ink text-ink" : "border-line text-ink-soft"}`}>
                 <Icon className="h-5 w-5" /> <span className="text-center leading-tight">{v.label.split(" /")[0]}</span>
               </button>
             );
@@ -111,7 +111,7 @@ function AccountForm({ account }) {
           <div className="flex gap-2">
             {!isCredit && (
               <button type="button" onClick={() => setNegative((n) => !n)}
-                className={`w-12 shrink-0 rounded-2xl border text-lg font-bold ${negative ? "border-expense bg-expense-soft text-expense" : "border-line text-ink-soft"}`}>
+                className={`w-12 shrink-0 rounded-control border text-lg font-semibold ${negative ? "border-expense bg-expense-soft text-expense" : "border-line text-ink-soft"}`}>
                 {negative ? "−" : "+"}
               </button>
             )}

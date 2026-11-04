@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Target, Plus, Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { monthRange, groupDigits, parseAmount } from "@/lib/format";
 import { CategoryIcon, Money, PageHeader, Sheet, Empty } from "@/components/ui";
@@ -31,70 +31,86 @@ export default function BudgetPage() {
 
   return (
     <div>
-      <PageHeader title="Anggaran" subtitle="Batas pengeluaran bulanan" />
+      <PageHeader title="Anggaran" subtitle={`Bulan ini, ${daysLeft} hari lagi`} />
 
-      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-700 p-5 text-white shadow-lift" style={{ boxShadow: "0 20px 40px -18px rgba(13,148,136,.6)" }}>
-        <div className="pointer-events-none absolute -right-14 -top-14 h-48 w-48 rounded-full bg-white/10" />
-        <p className="text-[12px] font-bold uppercase tracking-[.14em] text-white/70">Sisa anggaran</p>
-        <Money value={totalBudget - totalSpent} className="mt-1 block text-[32px] font-extrabold tracking-tight" />
-        <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/20">
-          <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="mt-2 flex justify-between text-[12.5px] text-white/80">
-          <span>Terpakai <Money value={totalSpent} compact dots={4} /> dari <Money value={totalBudget} compact dots={4} /></span>
-          <span>{daysLeft} hari lagi</span>
-        </div>
-      </section>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <div className="space-y-6">
+          <section className="card p-6">
+            <p className="text-[16px] text-ink-soft">Sisa dari semua anggaran</p>
+            <Money value={totalBudget - totalSpent} className={`mt-1 block text-[34px] font-semibold leading-tight ${totalSpent > totalBudget ? "text-expense" : ""}`} />
+            <PlanTrack spent={totalSpent} plan={totalBudget} className="mt-4" />
+            <p className="mt-2 flex justify-between text-[14px] text-ink-soft">
+              <span>Terpakai <Money value={totalSpent} dots={4} className="text-ink" /></span>
+              <span>dari <Money value={totalBudget} dots={4} className="text-ink" /></span>
+            </p>
+          </section>
 
-      <h2 className="section-title mb-2 mt-6">Per kategori</h2>
-      {withBudget.length === 0 ? (
-        <div className="card"><Empty icon={Target} title="Belum ada anggaran" text="Pilih kategori di bawah untuk menetapkan batas bulanan." /></div>
-      ) : (
-        <div className="space-y-2">
-          {withBudget.map((b) => {
-            const p = b.spent / b.amount;
-            const over = p > 1;
-            const color = over ? "#E5484D" : p > 0.8 ? "#F59E0B" : b.cat.color;
-            return (
-              <button key={b.id} onClick={() => setEdit({ cat: b.cat, budget: b })} className="card flex w-full items-center gap-3 p-3.5 text-left">
-                <CategoryIcon category={b.cat} size={44} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate font-bold">{b.cat.name}</p>
-                    <p className={`text-[12.5px] font-bold ${over ? "text-expense" : "text-ink-mute"}`}>
-                      {over ? "Lewat " : "Sisa "}<Money value={Math.abs(b.amount - b.spent)} compact dots={4} />
-                    </p>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-line">
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(100, p * 100)}%`, background: color }} />
-                  </div>
-                  <p className="mt-1 text-[12px] text-ink-mute"><Money value={b.spent} compact dots={4} /> / <Money value={b.amount} compact dots={4} /></p>
-                </div>
-              </button>
-            );
-          })}
+          <section>
+            <h2 className="section-title mb-2">Per kategori</h2>
+            {withBudget.length === 0 ? (
+              <Empty title="Belum ada anggaran" text="Pilih kategori di daftar untuk menetapkan batas bulanan." />
+            ) : (
+              <div className="card p-1">
+                {withBudget.sort((a, b) => b.spent / b.amount - a.spent / a.amount).map((b) => {
+                  const over = b.spent > b.amount;
+                  const near = !over && b.spent / b.amount >= 0.8;
+                  return (
+                    <button key={b.id} onClick={() => setEdit({ cat: b.cat, budget: b })} className="flex min-h-[80px] w-full items-center gap-3 rounded-control px-3 py-3 text-left hover:bg-canvas">
+                      <CategoryIcon category={b.cat} size={44} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="truncate text-[16px] font-medium">{b.cat.name}</p>
+                          <p className={`flex-none text-[14px] ${over ? "font-medium text-expense" : near ? "font-medium text-warn-ink" : "text-ink-soft"}`}>
+                            {over ? "Lewat " : "Sisa "}<Money value={Math.abs(b.amount - b.spent)} dots={4} />
+                          </p>
+                        </div>
+                        <PlanTrack spent={b.spent} plan={b.amount} className="mt-2" />
+                        <p className="tabular mt-1 text-[14px] text-ink-soft"><Money value={b.spent} dots={4} /> dari <Money value={b.amount} dots={4} /></p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
-      )}
 
-      {without.length > 0 && (
-        <>
-          <h2 className="section-title mb-2 mt-6">Tambah anggaran</h2>
-          <div className="card divide-y divide-line">
-            {without.map((c) => (
-              <button key={c.id} onClick={() => setEdit({ cat: c })} className="flex w-full items-center gap-3 p-3 text-left">
-                <CategoryIcon category={c} size={36} />
-                <span className="flex-1 font-semibold">{c.name}</span>
-                {spent[c.id] ? <Money value={spent[c.id]} compact className="text-[12.5px] text-ink-mute" dots={4} /> : null}
-                <Plus className="h-5 w-5 text-brand-600" />
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+        {without.length > 0 && (
+          <section>
+            <h2 className="section-title mb-2">Belum dianggarkan</h2>
+            <div className="card p-1">
+              {without.map((c) => (
+                <button key={c.id} onClick={() => setEdit({ cat: c })} className="flex min-h-[60px] w-full items-center gap-3 rounded-control px-3 py-2 text-left hover:bg-canvas">
+                  <CategoryIcon category={c} size={36} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[16px]">{c.name}</span>
+                    <span className="block text-[14px] text-ink-soft">{spent[c.id] ? <>Terpakai <Money value={spent[c.id]} dots={4} /></> : "Belum ada pengeluaran"}</span>
+                  </span>
+                  <span className="flex-none text-[14px] font-medium text-brand-700">Atur</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
 
       <Sheet open={!!edit} onClose={() => setEdit(null)} title={edit?.cat?.name || ""}>
         {edit && <BudgetForm key={edit.cat.id} cat={edit.cat} budget={edit.budget} onDone={() => setEdit(null)} />}
       </Sheet>
+    </div>
+  );
+}
+
+/** Track sepanjang rencana; bagian terpakai diisi; lewat anggaran ditandai merah di ujung. */
+function PlanTrack({ spent, plan, className = "" }) {
+  const ratio = plan ? spent / plan : 0;
+  const over = ratio > 1;
+  return (
+    <div className={`flex h-2 gap-0.5 ${className}`}>
+      <div className="relative h-full flex-1 overflow-hidden rounded-full bg-rule" style={over ? { flexGrow: 1 / ratio } : undefined}>
+        {spent > 0 && <div className="h-full rounded-full bg-brand-600" style={{ width: `${Math.min(1, ratio) * 100}%` }} />}
+      </div>
+      {over && <div className="h-full rounded-full bg-expense" style={{ flexGrow: 1 - 1 / ratio }} />}
     </div>
   );
 }
@@ -121,13 +137,13 @@ function BudgetForm({ cat, budget, onDone }) {
 
   return (
     <div className="space-y-4 pb-3">
-      <div className="flex items-center gap-3 rounded-2xl bg-canvas p-3">
+      <div className="flex items-center gap-3 rounded-control bg-canvas p-3">
         <CategoryIcon category={cat} size={44} />
-        <p className="text-[13px] text-ink-soft">Termasuk semua sub-kategori dan transaksi pasangan di akun bersama milikmu.</p>
+        <p className="text-[14px] text-ink-soft">Termasuk semua sub-kategori dan transaksi pasangan di akun bersama milikmu.</p>
       </div>
       <div>
         <span className="label">Batas per bulan</span>
-        <input autoFocus className="field tabular text-[20px] font-extrabold" inputMode="numeric" placeholder="Rp 0" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))} />
+        <input autoFocus className="field tabular text-[20px] font-semibold" inputMode="numeric" placeholder="Rp 0" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))} />
       </div>
       <div className="flex gap-2">
         {budget && <button className="btn-danger px-4" onClick={remove} aria-label="Hapus"><Trash2 className="h-5 w-5" /></button>}

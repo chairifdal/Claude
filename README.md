@@ -19,6 +19,16 @@ Stack: **GitHub → Vercel (Next.js 14) + Supabase (Postgres, Auth, Realtime, RL
 Semua aturan akses ditegakkan di database lewat **Row Level Security**, tidak hanya di UI.
 Lihat `supabase/schema.sql` dan tesnya di `supabase/tests/rls_test.sql`.
 
+## Desain
+
+UI mengikuti skill **design-taste-frontend** ([Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill), MIT), yang terpasang di `.claude/skills/design-taste-frontend/`.
+
+- Gaya app: `pastel-consumer` (seed 1947618770), dengan font Manrope dan aksen cobalt `#1d5fd6`. Permukaan flat dengan border 1px; tidak ada gradient, glow, glass, atau shadow pada elemen diam.
+- Ciri khas: angka saldo dengan Manrope, plus "kartu" akun dalam warnanya sendiri pada rasio kartu asli.
+- Elemen khas produk: **Kita bulan ini**, yaitu jalur pribadi / bersama / pasangan, dengan warna per orang yang berjarak ≥60°.
+- Pertanyaan utama Beranda: "Berapa uang kita sekarang, dan bulan ini habis ke mana?" Temuan terpenting (anggaran yang lewat atau hampir habis) tampil di bawah judul.
+- Cek ulang: `node .claude/skills/design-taste-frontend/scripts/lint.mjs --app app components` dan `inspect.mjs --app <url>`.
+
 ## Deploy (±15 menit)
 
 ### 1. Supabase

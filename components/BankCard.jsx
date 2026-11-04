@@ -1,75 +1,65 @@
 "use client";
-import { Users, Nfc } from "lucide-react";
+import { Users } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_KINDS, ROLE_LABEL } from "@/lib/constants";
 import { firstName } from "@/lib/format";
-import { Money, shade } from "./ui";
+import { Money } from "./ui";
 
-/** Kartu ala dompet digital. `compact` = hanya strip header (untuk tumpukan). */
-export function BankCard({ account, compact = false, className = "" }) {
+/** Kartu fisik akun: warna flat milik akun, rasio kartu asli (85.6 × 54 mm). */
+export function BankCard({ account, className = "", concealed = false }) {
   const { people, user } = useApp();
   const kind = ACCOUNT_KINDS[account.kind] || ACCOUNT_KINDS.bank;
   const Icon = kind.icon;
-  const c = account.color || "#2440DE";
   const shared = account.owner_id !== user?.id;
   const isCredit = account.kind === "credit";
   const debt = isCredit ? Math.max(0, -account.balance) : 0;
-  const usage = isCredit && account.credit_limit ? Math.min(1, debt / Number(account.credit_limit)) : 0;
+  const limit = Number(account.credit_limit) || 0;
+  const usage = isCredit && limit ? Math.min(1, debt / limit) : 0;
 
   return (
-    <div className={`relative overflow-hidden rounded-[1.6rem] text-white ${className}`}
-      style={{ background: `linear-gradient(135deg, ${shade(c, 12)} 0%, ${c} 45%, ${shade(c, -35)} 100%)`, aspectRatio: compact ? undefined : "1.62" }}>
-      <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/10" />
-      <div className="pointer-events-none absolute -bottom-20 right-10 h-44 w-44 rounded-full bg-white/[.07]" />
-
-      <div className="relative flex h-full flex-col p-5">
+    <div className={`relative overflow-hidden rounded-card text-white ${className}`}
+      style={{ background: account.color || "#1d5fd6", aspectRatio: "1.586" }}>
+      <div className="flex h-full flex-col p-5">
         <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
-            <Icon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[17px] font-extrabold tracking-tight">{account.name}</p>
-            <p className="truncate text-[11.5px] font-semibold uppercase tracking-wider text-white/70">
-              {kind.label}{account.account_number ? ` · •••• ${account.account_number}` : ""}
-            </p>
-          </div>
+          <Icon className="h-5 w-5 shrink-0 opacity-90" strokeWidth={1.75} />
+          <p className="min-w-0 flex-1 truncate text-[18px] font-semibold">{account.name}</p>
           {shared ? (
-            <span className="chip bg-white/15 py-1 text-[11px] text-white ring-1 ring-white/25">
-              <Users className="h-3 w-3" /> {firstName(people[account.owner_id])} · {ROLE_LABEL[account.my_role]}
+            <span className="chip bg-white/20 py-1 text-[14px] text-white">
+              <Users className="h-3.5 w-3.5" /> {firstName(people[account.owner_id])} · {ROLE_LABEL[account.my_role]}
             </span>
           ) : account.member_count > 0 ? (
-            <span className="chip bg-white/15 py-1 text-[11px] text-white ring-1 ring-white/25"><Users className="h-3 w-3" /> Dibagikan</span>
+            <span className="chip bg-white/20 py-1 text-[14px] text-white"><Users className="h-3.5 w-3.5" /> Dibagikan</span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[14px] text-white/80">
+          {kind.label}{account.account_number ? ` · •••• ${account.account_number}` : ""}
+        </p>
+
+        <div className={`mt-auto ${concealed ? "invisible" : ""}`} aria-hidden={concealed || undefined}>
+          {isCredit ? (
+            <>
+              <p className="text-[14px] text-white/80">Tagihan</p>
+              <Money value={debt} className="block text-[30px] font-semibold leading-tight" />
+              {limit > 0 && (
+                <div className="mt-2">
+                  <div className="h-2 overflow-hidden rounded-full bg-white/25">
+                    {usage > 0 && <div className="h-full rounded-full bg-white" style={{ width: `${usage * 100}%` }} />}
+                  </div>
+                  <p className="mt-1 flex justify-between text-[14px] text-white/85">
+                    <span>Terpakai <Money value={debt} compact dots={4} /></span>
+                    <span>Limit <Money value={limit} compact dots={4} /></span>
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
-            <Nfc className="h-5 w-5 text-white/70" />
+            <>
+              <div className="mb-3 h-7 w-10 rounded-[5px] bg-[#e8c770]" aria-hidden="true" />
+              <p className="text-[14px] text-white/80">Saldo</p>
+              <Money value={account.balance} className="block text-[30px] font-semibold leading-tight" />
+            </>
           )}
         </div>
-
-        {!compact && (
-          <>
-            <div className="mt-auto">
-              {isCredit ? (
-                <>
-                  <p className="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">Tagihan</p>
-                  <Money value={debt} className="text-[28px] font-extrabold tracking-tight" />
-                  {account.credit_limit && (
-                    <div className="mt-2">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
-                        <div className="h-full rounded-full bg-white" style={{ width: `${usage * 100}%` }} />
-                      </div>
-                      <p className="mt-1 text-[11px] text-white/70">Sisa limit <Money value={Number(account.credit_limit) - debt} compact dots={4} /></p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 h-7 w-10 rounded-md bg-gradient-to-br from-amber-200 to-amber-500 opacity-90 shadow-inner" />
-                  <p className="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">Saldo</p>
-                  <Money value={account.balance} className="text-[28px] font-extrabold tracking-tight" />
-                </>
-              )}
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

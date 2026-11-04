@@ -9,16 +9,12 @@ import { ACCOUNT_KINDS, CATEGORY_ICONS } from "@/lib/constants";
 export function Money({ value, sign, compact, className = "", dots = 7 }) {
   const { hidden } = useApp();
   if (hidden) {
-    return (
-      <span className={`tabular inline-flex items-center gap-1 ${className}`}>
-        Rp <span className="tracking-[.12em]">{"•".repeat(dots)}</span>
-      </span>
-    );
+    return <span className={`tabular ${className}`} aria-label="Saldo disembunyikan">Rp {"•".repeat(dots)}</span>;
   }
-  return <span className={`tabular ${className}`}>{formatIDR(value, { sign, compact })}</span>;
+  return <span className={`tabular whitespace-nowrap ${className}`}>{formatIDR(value, { sign, compact })}</span>;
 }
 
-export function Sheet({ open, onClose, title, children, footer }) {
+export function Sheet({ open, onClose, title, children }) {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -30,52 +26,51 @@ export function Sheet({ open, onClose, title, children, footer }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <div className="absolute inset-0 animate-fade-in bg-ink/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative flex max-h-[92dvh] w-full max-w-md animate-sheet-up flex-col rounded-t-[2rem] bg-white shadow-sheet">
-        <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-line" />
+    <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="absolute inset-0 animate-fade-in bg-ink/40" onClick={onClose} />
+      <div className="relative flex max-h-[92dvh] w-full max-w-md animate-sheet-up flex-col rounded-t-card bg-white shadow-float lg:rounded-card">
+        <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-control lg:hidden" />
         <div className="flex items-center justify-between px-5 pb-2 pt-3">
-          <h2 className="text-lg font-extrabold tracking-tight">{title}</h2>
-          <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full bg-canvas text-ink-soft" aria-label="Tutup">
-            <X className="h-[18px] w-[18px]" />
+          <h2 className="text-[20px] font-semibold">{title}</h2>
+          <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full text-ink-soft hover:bg-canvas" aria-label="Tutup">
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">{children}</div>
-        {footer && <div className="border-t border-line px-5 pt-3 pb-safe">{footer}</div>}
+        <div className="flex-1 overflow-y-auto px-5 pb-safe no-scrollbar">{children}</div>
       </div>
     </div>
   );
 }
 
+/** Ikon kategori: outline polos abu di slot tetap, tanpa wadah berwarna. */
 export function CategoryIcon({ category, size = 40, className = "" }) {
   const Icon = CATEGORY_ICONS[category?.icon] || CATEGORY_ICONS.circle;
-  const color = category?.color || "#94A3B8";
   return (
-    <span className={`grid shrink-0 place-items-center rounded-2xl ${className}`}
-      style={{ width: size, height: size, background: `${color}1A`, color }}>
-      <Icon style={{ width: size * 0.48, height: size * 0.48 }} strokeWidth={2.2} />
+    <span className={`grid shrink-0 place-items-center text-ink-soft ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+      <Icon style={{ width: 22, height: 22 }} strokeWidth={1.6} />
     </span>
   );
 }
 
 export function AccountGlyph({ account, size = 40, className = "" }) {
-  const Icon = ACCOUNT_KINDS[account?.kind]?.icon || ACCOUNT_KINDS.bank.icon;
-  const color = account?.color || "#2440DE";
+  // Miniatur kartu dalam warna akun: objek uang itu sendiri, bukan ikon dalam lingkaran
   return (
-    <span className={`grid shrink-0 place-items-center rounded-2xl text-white ${className}`}
-      style={{ width: size, height: size, background: `linear-gradient(140deg, ${color}, ${shade(color, -28)})` }}>
-      <Icon style={{ width: size * 0.46, height: size * 0.46 }} strokeWidth={2.2} />
+    <span className={`relative shrink-0 rounded-[5px] ${className}`} aria-hidden="true"
+      style={{ width: size, height: Math.round(size / 1.586), background: account?.color || "#1d5fd6" }}>
+      <span className="absolute left-[18%] top-[30%] h-[28%] w-[24%] rounded-[2px] bg-[#e8c770]" />
     </span>
   );
 }
 
-export function Avatar({ profile, size = 32, ring = false }) {
+/** Setiap orang punya hue tetap (lihat personHue di app-data), tampil sebagai tint pucat + inisial gelap. */
+export function Avatar({ profile, size = 32 }) {
+  const { personHue } = useApp();
   const name = profile?.full_name || profile?.email || "?";
-  const hue = profile?.avatar_hue ?? 220;
+  const h = personHue(profile?.id);
   return (
-    <span title={name}
-      className={`grid shrink-0 place-items-center rounded-full font-bold text-white ${ring ? "ring-2 ring-white" : ""}`}
-      style={{ width: size, height: size, fontSize: size * 0.4, background: `linear-gradient(140deg, hsl(${hue} 80% 62%), hsl(${(hue + 40) % 360} 70% 45%))` }}>
+    <span title={name} aria-hidden="true"
+      className="grid shrink-0 place-items-center rounded-full font-semibold"
+      style={{ width: size, height: size, fontSize: size * 0.42, background: `hsl(${h} 85% 91%)`, color: `hsl(${h} 70% 24%)` }}>
       {name.trim().charAt(0).toUpperCase()}
     </span>
   );
@@ -83,16 +78,16 @@ export function Avatar({ profile, size = 32, ring = false }) {
 
 export function PageHeader({ title, subtitle, back, right }) {
   return (
-    <header className="sticky top-0 z-30 -mx-4 mb-2 bg-canvas/85 px-4 pt-safe backdrop-blur-xl">
-      <div className="flex h-16 items-center gap-2">
+    <header className="sticky top-0 z-30 -mx-4 mb-4 bg-canvas px-4 pt-safe lg:static lg:mx-0 lg:px-0">
+      <div className="flex min-h-16 items-center gap-2 py-2">
         {back && (
           <Link href={back} className="icon-btn -ml-2" aria-label="Kembali">
             <ChevronLeft className="h-6 w-6" />
           </Link>
         )}
         <div className="min-w-0 flex-1">
-          {subtitle && <p className="text-[12px] font-semibold text-ink-mute">{subtitle}</p>}
-          <h1 className="truncate text-[22px] font-extrabold leading-tight tracking-tight">{title}</h1>
+          <h1 className="truncate text-[28px] font-semibold leading-tight">{title}</h1>
+          {subtitle && <p className="truncate text-[14px] text-ink-soft">{subtitle}</p>}
         </div>
         {right}
       </div>
@@ -100,13 +95,13 @@ export function PageHeader({ title, subtitle, back, right }) {
   );
 }
 
-export function Empty({ icon: Icon, title, text, action }) {
+/** Blok kosong: bingkai tetap, satu kalimat, satu aksi. */
+export function Empty({ title, text, action }) {
   return (
-    <div className="flex flex-col items-center px-6 py-10 text-center">
-      {Icon && <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600"><Icon className="h-7 w-7" /></span>}
-      <p className="mt-4 font-bold">{title}</p>
-      {text && <p className="mt-1 text-sm text-ink-mute">{text}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="rounded-control border border-dashed border-control px-4 py-5">
+      <p className="text-[16px] font-medium">{title}</p>
+      {text && <p className="mt-1 text-[14px] text-ink-soft">{text}</p>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
@@ -117,20 +112,21 @@ export function Toast() {
   const err = toast.tone === "err";
   const Icon = err ? AlertCircle : CheckCircle2;
   return (
-    <div key={toast.id} className="pointer-events-none fixed inset-x-0 top-3 z-[60] flex justify-center px-4 pt-safe">
-      <div className={`flex animate-pop-in items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white shadow-lift ${err ? "bg-expense" : "bg-ink"}`}>
-        <Icon className="h-[18px] w-[18px]" /> {toast.message}
+    <div key={toast.id} className="pointer-events-none fixed inset-x-0 top-3 z-[60] flex justify-center px-4 pt-safe" role="status">
+      <div className="flex animate-pop-in items-center gap-2 rounded-full bg-ink px-4 py-3 text-[14px] font-medium text-white shadow-float">
+        <Icon className={`h-[18px] w-[18px] ${err ? "text-[#ff8a8a]" : "text-[#8fe3a8]"}`} /> {toast.message}
       </div>
     </div>
   );
 }
 
+/** Kontrol segmen: track abu, pill putih aktif, label tinta. */
 export function Segmented({ value, onChange, options, className = "" }) {
   return (
-    <div className={`grid gap-1 rounded-2xl bg-canvas p-1 ${className}`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
+    <div role="tablist" className={`grid gap-1 rounded-full bg-[#eef1f4] p-1 ${className}`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
       {options.map((o) => (
-        <button key={o.value} type="button" onClick={() => onChange(o.value)}
-          className={`rounded-xl py-2.5 text-[13px] font-bold transition ${value === o.value ? "bg-white shadow-card " + (o.activeClass || "text-ink") : "text-ink-mute"}`}>
+        <button key={o.value} type="button" role="tab" aria-selected={value === o.value} onClick={() => onChange(o.value)}
+          className={`h-10 rounded-full text-[14px] font-medium transition ${value === o.value ? "border border-line bg-white text-ink" : "text-ink-soft"}`}>
           {o.label}
         </button>
       ))}
@@ -138,11 +134,23 @@ export function Segmented({ value, onChange, options, className = "" }) {
   );
 }
 
-/** darken/lighten a hex color by percent (-100..100) */
-export function shade(hex, pct) {
-  const h = hex.replace("#", "");
-  const num = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
-  const f = (c) => Math.max(0, Math.min(255, Math.round(c + (pct / 100) * (pct < 0 ? c : 255 - c))));
-  const r = f(num >> 16), g = f((num >> 8) & 255), b = f(num & 255);
-  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+/** Tint pucat + tinta gelap dari satu warna (gerak gaya pastel-consumer). */
+export function paleOf(hex) {
+  const { h, s } = hexToHsl(hex);
+  return { bg: `hsl(${h} ${Math.min(90, Math.max(45, s))}% 92%)`, ink: `hsl(${h} ${Math.min(80, Math.max(40, s))}% 26%)` };
+}
+
+export function hexToHsl(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
 }

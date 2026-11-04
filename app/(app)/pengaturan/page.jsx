@@ -43,27 +43,27 @@ export default function SettingsPage() {
               onKeyDown={(e) => e.key === "Enter" && saveName()} />
           ) : (
             <button onClick={() => setName(profile?.full_name || "")} className="text-left">
-              <p className="text-[18px] font-extrabold">{profile?.full_name}</p>
-              <p className="text-[12px] font-semibold text-brand-600">Ubah nama</p>
+              <p className="text-[20px] font-medium">{profile?.full_name}</p>
+              <p className="text-[14px] font-medium text-brand-700">Ubah nama</p>
             </button>
           )}
-          <p className="mt-0.5 truncate text-[13px] text-ink-mute">{profile?.email}</p>
+          <p className="mt-0.5 truncate text-[14px] text-ink-mute">{profile?.email}</p>
         </div>
       </section>
 
       <section id="undangan" className="mt-5">
         <h2 className="section-title mb-2">Undangan</h2>
         {invites.length === 0 ? (
-          <p className="card p-4 text-sm text-ink-mute">Tidak ada undangan. Minta pasanganmu mengundang email <b className="text-ink">{profile?.email}</b> dari halaman akunnya.</p>
+          <p className="card p-5 text-[16px] text-ink-soft">Tidak ada undangan. Minta pasanganmu mengundang email <b className="text-ink">{profile?.email}</b> dari halaman akunnya.</p>
         ) : (
           <div className="space-y-2">
             {invites.map((inv) => (
               <div key={inv.id} className="card animate-pop-in p-4">
                 <div className="flex items-start gap-3">
-                  <span className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-100 text-amber-600"><MailOpen className="h-5 w-5" /></span>
+                  <MailOpen className="mt-0.5 h-5 w-5 flex-none text-ink-soft" />
                   <div className="flex-1">
-                    <p className="font-bold">{inv.account_name}</p>
-                    <p className="text-[13px] text-ink-mute">Dari {inv.inviter_name} · Akses: <b className="text-ink-soft">{ROLE_LABEL[inv.role]}</b></p>
+                    <p className="text-[16px] font-medium">{inv.account_name}</p>
+                    <p className="text-[14px] text-ink-mute">Dari {inv.inviter_name} · Akses: <b className="text-ink-soft">{ROLE_LABEL[inv.role]}</b></p>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -80,16 +80,16 @@ export default function SettingsPage() {
         <Row href="/kategori" icon={Shapes} label="Kategori & sub-kategori" />
         <Row href="/aktivitas" icon={ReceiptText} label="Semua transaksi" />
         <button onClick={toggleHidden} className="flex w-full items-center gap-3 p-4 text-left">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-canvas text-ink-soft">{hidden ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}</span>
-          <span className="flex-1 font-semibold">Sembunyikan saldo</span>
-          <span className={`relative h-7 w-12 rounded-full transition ${hidden ? "bg-brand-600" : "bg-line"}`}>
-            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${hidden ? "left-6" : "left-1"}`} />
+          {hidden ? <EyeOff className="h-5 w-5 text-ink-soft" /> : <Eye className="h-5 w-5 text-ink-soft" />}
+          <span className="flex-1 text-[16px]">Sembunyikan saldo</span>
+          <span className={`relative h-7 w-12 rounded-full transition ${hidden ? "bg-ink" : "bg-control"}`}>
+            <span className={`absolute top-1 h-5 w-5 rounded-full border border-control bg-white transition-[left] ${hidden ? "left-6" : "left-1"}`} />
           </span>
         </button>
       </section>
 
-      <section className="mt-5 flex gap-3 rounded-3xl bg-brand-50 p-4 text-[13px] text-brand-900">
-        <Smartphone className="h-5 w-5 shrink-0 text-brand-600" />
+      <section className="card mt-5 flex gap-3 p-5 text-[14px] text-ink-soft">
+        <Smartphone className="h-5 w-5 shrink-0 text-ink-soft" />
         <p>Pasang di layar utama: buka di Safari → tombol <b>Bagikan</b> → <b>Tambah ke Layar Utama</b>. Di Android: menu Chrome → <b>Instal aplikasi</b>.</p>
       </section>
 
@@ -101,8 +101,8 @@ export default function SettingsPage() {
 function Row({ href, icon: Icon, label }) {
   return (
     <Link href={href} className="flex items-center gap-3 p-4">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-canvas text-ink-soft"><Icon className="h-[18px] w-[18px]" /></span>
-      <span className="flex-1 font-semibold">{label}</span>
+      <Icon className="h-5 w-5 text-ink-soft" />
+      <span className="flex-1 text-[16px]">{label}</span>
       <ChevronRight className="h-5 w-5 text-ink-mute" />
     </Link>
   );

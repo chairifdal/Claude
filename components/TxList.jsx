@@ -1,5 +1,5 @@
 "use client";
-import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, ReceiptText } from "lucide-react";
+import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { dayLabel, timeLabel, firstName } from "@/lib/format";
 import { Avatar, CategoryIcon, Empty, Money } from "./ui";
@@ -28,50 +28,47 @@ export function TxRow({ tx, perspectiveId }) {
   const byOther = tx.created_by !== user?.id;
   const canEdit = from && (from.my_role === "owner" || from.my_role === "editor");
 
-  let title, sub, icon;
+  let title, meta, icon;
   if (tx.type === "transfer") {
-    title = dir === "in" ? `Dari ${fromName}` : dir === "out" ? `Ke ${toName}` : "Transfer";
-    sub = `${fromName} → ${toName}`;
+    title = dir === "in" ? `Dari ${fromName}` : dir === "out" ? `Ke ${toName}` : `${fromName} ke ${toName}`;
+    meta = "Transfer";
     const I = dir === "in" ? ArrowDownLeft : dir === "out" ? ArrowUpRight : ArrowLeftRight;
     icon = (
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-transfer-soft text-transfer">
-        <I className="h-5 w-5" strokeWidth={2.4} />
+      <span className="grid h-11 w-11 shrink-0 place-items-center text-ink-soft" aria-hidden="true">
+        <I style={{ width: 22, height: 22 }} strokeWidth={1.6} />
       </span>
     );
   } else {
     title = cat?.name || (tx.type === "income" ? "Pemasukan" : "Pengeluaran");
-    sub = [parent?.name, fromName].filter(Boolean).join(" · ");
-    icon = <CategoryIcon category={cat || { color: tx.type === "income" ? "#0F9F6E" : "#E5484D" }} size={44} />;
+    meta = [parent?.name, fromName].filter(Boolean).join(" · ");
+    icon = <CategoryIcon category={cat || { color: "#94A3B8" }} size={44} />;
   }
 
-  const amountClass = dir === "in" ? "text-income" : dir === "out" ? "text-ink" : "text-transfer";
+  // Polaritas tenang: masuk hijau dengan +, keluar tinta dengan −
+  const amount = dir === "in" ? tx.amount : dir === "out" ? -tx.amount : tx.amount;
+  const amountClass = dir === "in" ? "text-income" : "text-ink";
 
   return (
     <button type="button" disabled={!canEdit} onClick={() => openTx({ tx })}
-      className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition enabled:hover:bg-canvas enabled:active:scale-[.99]">
+      className="flex min-h-[72px] w-full items-center gap-3 rounded-control px-3 py-3 text-left transition enabled:hover:bg-canvas">
       {icon}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-bold">{title}</p>
-        <p className="flex items-center gap-1.5 truncate text-[12.5px] text-ink-mute">
-          {byOther && creator && <Avatar profile={creator} size={16} />}
-          <span className="truncate">
-            {byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || sub}
-          </span>
+        <p className="truncate text-[16px] font-medium">{title}</p>
+        <p className="flex items-center gap-1.5 truncate text-[14px] text-ink-soft">
+          {byOther && creator && <Avatar profile={creator} size={18} />}
+          <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || meta}</span>
         </p>
       </div>
-      <div className="text-right">
-        <Money value={dir === "in" ? tx.amount : dir === "out" ? -tx.amount : tx.amount} sign={dir === "in"}
-          className={`text-[15px] font-extrabold ${amountClass}`} dots={5} />
-        <p className="text-[11.5px] text-ink-mute">{timeLabel(tx.occurred_at)}</p>
+      <div className="flex-none text-right">
+        <Money value={amount} sign={dir === "in"} className={`block text-[16px] font-medium ${amountClass}`} dots={5} />
+        <p className="tabular text-[14px] text-ink-soft">{timeLabel(tx.occurred_at)}</p>
       </div>
     </button>
   );
 }
 
-export function TxGroupedList({ rows, perspectiveId, emptyText = "Belum ada transaksi" }) {
-  if (!rows.length) {
-    return <Empty icon={ReceiptText} title={emptyText} text="Tekan tombol + untuk mencatat transaksi pertama." />;
-  }
+export function TxGroupedList({ rows, perspectiveId, emptyText = "Belum ada transaksi", emptyHint = "Tekan + untuk mencatat yang pertama." }) {
+  if (!rows.length) return <Empty title={emptyText} text={emptyHint} />;
   const groups = [];
   let current = null;
   for (const tx of rows) {
@@ -80,11 +77,11 @@ export function TxGroupedList({ rows, perspectiveId, emptyText = "Belum ada tran
     current.items.push(tx);
   }
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {groups.map((g) => (
         <section key={g.key}>
-          <h3 className="mb-1 px-2 text-[12px] font-bold uppercase tracking-wider text-ink-mute">{dayLabel(g.date)}</h3>
-          <div className="card p-1.5">
+          <h3 className="mb-2 text-[14px] font-medium text-ink-soft">{dayLabel(g.date)}</h3>
+          <div className="card p-1">
             {g.items.map((tx) => <TxRow key={tx.id} tx={tx} perspectiveId={perspectiveId} />)}
           </div>
         </section>

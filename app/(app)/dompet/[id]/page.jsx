@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Eye, PenLine, Loader2 } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
@@ -43,48 +44,57 @@ export default function AccountDetail() {
       <PageHeader title={account.name} subtitle={isOwner ? "Akun saya" : "Akun bersama"} back="/dompet"
         right={isOwner && <button className="icon-btn" onClick={() => openAccount({ account })} aria-label="Ubah"><Pencil className="h-5 w-5" /></button>} />
 
-      <BankCard account={account} className="shadow-lift" />
+      <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
+        <div className="space-y-4">
+          <BankCard account={account} />
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <div className="card p-3.5">
-          <p className="text-[12px] font-semibold text-ink-mute">Masuk bulan ini</p>
-          <Money value={month.inn} compact className="text-[17px] font-extrabold text-income" dots={5} />
+          <div className="card grid grid-cols-2 divide-x divide-line p-5">
+            <div className="pr-4">
+              <p className="text-[14px] text-ink-soft">Masuk bulan ini</p>
+              <Money value={month.inn} sign className="block text-[20px] font-medium text-income" dots={5} />
+            </div>
+            <div className="pl-4">
+              <p className="text-[14px] text-ink-soft">Keluar bulan ini</p>
+              <Money value={month.out} className="block text-[20px] font-medium" dots={5} />
+            </div>
+          </div>
+
+          {canWrite ? (
+            <div className="grid grid-cols-3 gap-3">
+              <ActionTile icon={Minus} label="Keluar" bg="#eef1f4" ink="#1b1d1f" onClick={() => openTx({ type: "expense", accountId: id })} />
+              <ActionTile icon={Plus} label="Masuk" bg="#dcfae5" ink="#04250e" onClick={() => openTx({ type: "income", accountId: id })} />
+              <ActionTile icon={ArrowLeftRight} label="Transfer" bg="#dcf1ff" ink="#0a3a80" onClick={() => openTx({ type: "transfer", accountId: id })} />
+            </div>
+          ) : (
+            <div className="card p-5">
+              <p className="flex items-center gap-2 text-[16px]"><Eye className="h-4 w-4 text-ink-soft" /> Kamu hanya bisa melihat akun ini</p>
+              <p className="mt-1 text-[14px] text-ink-soft">Kamu tetap bisa mengirim uang ke sini dari akunmu sendiri.</p>
+              <button className="btn-primary mt-4 w-full" onClick={() => openTx({ type: "transfer", toAccountId: id })}>
+                <Send className="h-4 w-4" /> Kirim ke {account.name}
+              </button>
+            </div>
+          )}
+
+          <button onClick={() => setShareOpen(true)} className="card flex w-full items-center gap-3 p-5 text-left hover:bg-raised">
+            <UserPlus className="h-5 w-5 flex-none text-ink-soft" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[16px] font-medium">{isOwner ? "Bagikan akun" : "Anggota akun"}</span>
+              <span className="block text-[14px] text-ink-soft">
+                {isOwner ? (account.member_count > 0 ? `${account.member_count} orang punya akses` : "Undang pasangan untuk melihat atau mencatat") : `Akses kamu: ${ROLE_LABEL[account.my_role]}`}
+              </span>
+            </span>
+            <span className="flex-none text-[14px] font-medium text-brand-700">{isOwner ? "Atur" : "Lihat"}</span>
+          </button>
         </div>
-        <div className="card p-3.5">
-          <p className="text-[12px] font-semibold text-ink-mute">Keluar bulan ini</p>
-          <Money value={month.out} compact className="text-[17px] font-extrabold text-expense" dots={5} />
-        </div>
+
+        <section>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="section-title">Riwayat</h2>
+            {rows.length > 8 && <Link href={`/aktivitas?akun=${id}`} className="text-[14px] font-medium text-brand-700">Semua {rows.length}</Link>}
+          </div>
+          <TxGroupedList rows={rows.slice(0, 8)} perspectiveId={id} emptyText="Belum ada transaksi di akun ini" />
+        </section>
       </div>
-
-      {canWrite ? (
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <ActionBtn icon={Minus} label="Keluar" color="#E5484D" onClick={() => openTx({ type: "expense", accountId: id })} />
-          <ActionBtn icon={Plus} label="Masuk" color="#0F9F6E" onClick={() => openTx({ type: "income", accountId: id })} />
-          <ActionBtn icon={ArrowLeftRight} label="Transfer" color="#3654F5" onClick={() => openTx({ type: "transfer", accountId: id })} />
-        </div>
-      ) : (
-        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-brand-50 p-3 text-[13px] font-semibold text-brand-700">
-          <Eye className="h-4 w-4" /> Kamu hanya bisa melihat akun ini. Kamu tetap bisa transfer ke sini dari akunmu.
-        </div>
-      )}
-      {!canWrite && (
-        <button className="btn-ghost mt-2 w-full bg-white shadow-card" onClick={() => openTx({ type: "transfer", toAccountId: id })}>
-          <Send className="h-4 w-4" /> Kirim ke {account.name}
-        </button>
-      )}
-
-      <button onClick={() => setShareOpen(true)} className="card mt-3 flex w-full items-center gap-3 p-4 text-left">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-50 text-brand-600"><UserPlus className="h-5 w-5" /></span>
-        <span className="flex-1">
-          <span className="block font-bold">{isOwner ? "Bagikan akun" : "Anggota akun"}</span>
-          <span className="block text-[12.5px] text-ink-mute">
-            {isOwner ? (account.member_count > 0 ? `${account.member_count} orang punya akses` : "Undang pasangan untuk melihat / mencatat") : `Akses kamu: ${ROLE_LABEL[account.my_role]}`}
-          </span>
-        </span>
-      </button>
-
-      <h2 className="section-title mb-2 mt-6">Riwayat</h2>
-      <TxGroupedList rows={rows} perspectiveId={id} />
 
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title={isOwner ? "Bagikan akun" : "Anggota akun"}>
         <SharePanel account={account} isOwner={isOwner} onLeft={() => { setShareOpen(false); router.replace("/dompet"); }} />
@@ -93,11 +103,11 @@ export default function AccountDetail() {
   );
 }
 
-function ActionBtn({ icon: Icon, label, color, onClick }) {
+function ActionTile({ icon: Icon, label, onClick, bg, ink }) {
   return (
-    <button onClick={onClick} className="card flex flex-col items-center gap-1.5 py-3 text-[13px] font-bold active:scale-[.97] transition">
-      <span className="grid h-10 w-10 place-items-center rounded-full text-white" style={{ background: color }}><Icon className="h-5 w-5" strokeWidth={2.6} /></span>
-      {label}
+    <button onClick={onClick} className="flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-card transition active:scale-[.97]" style={{ background: bg, color: ink }}>
+      <Icon className="h-6 w-6" strokeWidth={1.75} />
+      <span className="text-[14px] font-medium">{label}</span>
     </button>
   );
 }
@@ -158,14 +168,14 @@ function SharePanel({ account, isOwner, onLeft }) {
   return (
     <div className="space-y-5 pb-3">
       {isOwner && (
-        <form onSubmit={invite} className="space-y-3 rounded-3xl bg-canvas p-4">
-          <p className="text-[13px] text-ink-soft">Undang lewat email yang dipakai pasanganmu untuk daftar di aplikasi ini.</p>
+        <form onSubmit={invite} className="space-y-3 rounded-card bg-raised p-4">
+          <p className="text-[14px] text-ink-soft">Undang lewat email yang dipakai pasanganmu untuk daftar di aplikasi ini.</p>
           <input className="field" type="email" inputMode="email" placeholder="email@pasangan.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Segmented value={role} onChange={setRole} className="bg-white" options={[
+          <Segmented value={role} onChange={setRole} options={[
             { value: "editor", label: "Bisa catat" },
             { value: "viewer", label: "Hanya lihat" },
           ]} />
-          <p className="text-[12px] text-ink-mute">
+          <p className="text-[14px] text-ink-soft">
             {role === "editor" ? "Bisa melihat saldo & riwayat, serta menambah/mengubah transaksi di akun ini." : "Hanya bisa melihat saldo & riwayat. Tetap bisa mengirim transfer ke akun ini."}
           </p>
           <button className="btn-primary w-full" disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Send className="h-4 w-4" /> Kirim undangan</>}</button>
@@ -174,56 +184,56 @@ function SharePanel({ account, isOwner, onLeft }) {
 
       <div>
         <span className="label">Punya akses</span>
-        <div className="card divide-y divide-line">
-          <div className="flex items-center gap-3 p-3">
+        <div className="card p-1">
+          <div className="flex min-h-[64px] items-center gap-3 px-3 py-2">
             <Avatar profile={owner} size={38} />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-bold">{owner?.full_name || "Pemilik"} {owner?.id === user.id && <span className="text-ink-mute">(kamu)</span>}</p>
-              <p className="truncate text-[12px] text-ink-mute">{owner?.email}</p>
+              <p className="truncate text-[16px] font-medium">{owner?.full_name || "Pemilik"} {owner?.id === user.id && <span className="text-ink-mute">(kamu)</span>}</p>
+              <p className="truncate text-[14px] text-ink-soft">{owner?.email}</p>
             </div>
-            <span className="chip bg-amber-50 text-amber-700"><Crown className="h-3.5 w-3.5" /> Pemilik</span>
+            <span className="chip bg-[#eef1f4] py-1 text-[#3a3d40]"><Crown className="h-3.5 w-3.5" /> Pemilik</span>
           </div>
           {members.map((m) => {
             const p = people[m.user_id];
             return (
-              <div key={m.user_id} className="flex items-center gap-3 p-3">
+              <div key={m.user_id} className="flex min-h-[64px] items-center gap-3 px-3 py-2">
                 <Avatar profile={p} size={38} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold">{p?.full_name || "Anggota"} {m.user_id === user.id && <span className="text-ink-mute">(kamu)</span>}</p>
-                  <p className="truncate text-[12px] text-ink-mute">{p?.email}</p>
+                  <p className="truncate text-[16px] font-medium">{p?.full_name || "Anggota"} {m.user_id === user.id && <span className="text-ink-mute">(kamu)</span>}</p>
+                  <p className="truncate text-[14px] text-ink-soft">{p?.email}</p>
                 </div>
                 {isOwner ? (
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => changeRole(m, m.role === "editor" ? "viewer" : "editor")}
-                      className={`chip ${m.role === "editor" ? "bg-income-soft text-income" : "bg-brand-50 text-brand-600"}`}>
-                      {m.role === "editor" ? <PenLine className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />} {ROLE_LABEL[m.role]}
-                    </button>
-                    <button onClick={() => removeMember(m)} className="grid h-8 w-8 place-items-center rounded-full text-ink-mute hover:bg-expense-soft hover:text-expense" aria-label="Cabut akses">
+                  <div className="flex flex-none items-center gap-1">
+                    <select aria-label={`Akses ${p?.full_name || "anggota"}`} value={m.role} onChange={(e) => changeRole(m, e.target.value)}
+                      className="h-10 rounded-control border border-control bg-white px-3 text-[14px] font-medium">
+                      <option value="editor">Bisa catat</option>
+                      <option value="viewer">Hanya lihat</option>
+                    </select>
+                    <button onClick={() => removeMember(m)} className="grid h-10 w-10 place-items-center rounded-full text-ink-soft hover:bg-expense-soft hover:text-expense" aria-label={`Cabut akses ${p?.full_name || "anggota"}`}>
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
-                  <span className="chip bg-canvas text-ink-soft">{ROLE_LABEL[m.role]}</span>
+                  <span className="chip bg-[#eef1f4] py-1 text-[#3a3d40]">{ROLE_LABEL[m.role]}</span>
                 )}
               </div>
             );
           })}
         </div>
-        {isOwner && members.length > 0 && <p className="mt-2 px-1 text-[12px] text-ink-mute">Ketuk label akses untuk mengganti antara "Bisa catat" dan "Hanya lihat".</p>}
       </div>
 
       {pending.length > 0 && (
         <div>
           <span className="label">Menunggu diterima</span>
-          <div className="card divide-y divide-line">
+          <div className="card p-1">
             {pending.map((inv) => (
-              <div key={inv.id} className="flex items-center gap-3 p-3">
-                <span className="grid h-[38px] w-[38px] place-items-center rounded-full bg-canvas text-ink-mute"><Clock className="h-4 w-4" /></span>
+              <div key={inv.id} className="flex min-h-[64px] items-center gap-3 px-3 py-2">
+                <Clock className="mx-2.5 h-5 w-5 flex-none text-ink-soft" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{inv.email}</p>
-                  <p className="text-[12px] text-ink-mute">{ROLE_LABEL[inv.role]}</p>
+                  <p className="truncate text-[16px] font-medium">{inv.email}</p>
+                  <p className="text-[14px] text-ink-soft">{ROLE_LABEL[inv.role]}</p>
                 </div>
-                <button onClick={() => cancelInvite(inv)} className="text-[13px] font-bold text-expense">Batalkan</button>
+                <button onClick={() => cancelInvite(inv)} className="h-10 px-2 text-[14px] font-medium text-expense">Batalkan</button>
               </div>
             ))}
           </div>

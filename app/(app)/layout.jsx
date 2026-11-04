@@ -13,13 +13,15 @@ export default function AppLayout({ children }) {
   if (!mounted) {
     return (
       <div className="grid min-h-[100dvh] place-items-center">
-        <img src="/icons/icon.svg" alt="" className="h-16 w-16 animate-pulse rounded-2xl" />
+        <img src="/icons/icon.svg" alt="" className="h-16 w-16 rounded-control" />
       </div>
     );
   }
   return (
     <AppDataProvider>
-      <div className="mx-auto min-h-[100dvh] max-w-md px-4 pb-36">{children}</div>
+      <div className="lg:pl-14">
+        <main className="mx-auto min-h-[100dvh] max-w-md px-4 pb-32 lg:max-w-[1100px] lg:px-10 lg:pb-16 lg:pt-6">{children}</main>
+      </div>
       <AppChrome />
       <TransactionSheet />
       <AccountSheet />

@@ -16,9 +16,9 @@ export default function CategoriesPage() {
   return (
     <div>
       <PageHeader title="Kategori" subtitle="Atur kategori & sub-kategori" back="/pengaturan"
-        right={<button className="icon-btn bg-white shadow-card" onClick={() => setEdit({})} aria-label="Kategori baru"><Plus className="h-5 w-5" /></button>} />
+        right={<button className="icon-btn bg-white" onClick={() => setEdit({})} aria-label="Kategori baru"><Plus className="h-5 w-5" /></button>} />
 
-      <Segmented value={kind} onChange={setKind} className="bg-white shadow-card" options={[
+      <Segmented value={kind} onChange={setKind} className="bg-white" options={[
         { value: "expense", label: "Pengeluaran", activeClass: "text-expense" },
         { value: "income", label: "Pemasukan", activeClass: "text-income" },
       ]} />
@@ -31,13 +31,13 @@ export default function CategoriesPage() {
               <button onClick={() => setEdit({ category: r })} className="flex w-full items-center gap-3 p-3.5 text-left">
                 <CategoryIcon category={r} size={44} />
                 <div className="flex-1">
-                  <p className="font-bold">{r.name}</p>
-                  <p className="text-[12px] text-ink-mute">{subs.length ? `${subs.length} sub-kategori` : "Tanpa sub-kategori"}</p>
+                  <p className="text-[16px] font-medium">{r.name}</p>
+                  <p className="text-[14px] text-ink-soft">{subs.length ? `${subs.length} sub-kategori` : "Tanpa sub-kategori"}</p>
                 </div>
               </button>
               <div className="flex flex-wrap gap-1.5 border-t border-line bg-canvas/60 p-3">
                 {subs.map((s) => (
-                  <button key={s.id} onClick={() => setEdit({ category: s })} className="chip bg-white text-ink-soft shadow-card">
+                  <button key={s.id} onClick={() => setEdit({ category: s })} className="chip bg-white text-ink-soft">
                     <CornerDownRight className="h-3.5 w-3.5" style={{ color: r.color }} /> {s.name}
                   </button>
                 ))}
@@ -97,7 +97,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
       <div>
         <span className="label">Induk</span>
         <select className="field" value={parentId} onChange={(e) => setParentId(e.target.value)}>
-          <option value="">— Kategori utama —</option>
+          <option value="">Tanpa induk (kategori utama)</option>
           {parentOptions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
       </div>
@@ -135,7 +135,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
           {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : "Simpan"}
         </button>
       </div>
-      {category && !category.parent_id && <p className="text-[12px] text-ink-mute">Menghapus kategori utama juga menghapus sub-kategorinya. Transaksi lama tetap ada tanpa kategori.</p>}
+      {category && !category.parent_id && <p className="text-[14px] text-ink-soft">Menghapus kategori utama juga menghapus sub-kategorinya. Transaksi lama tetap ada tanpa kategori.</p>}
     </div>
   );
 }
