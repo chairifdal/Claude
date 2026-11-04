@@ -73,7 +73,7 @@ export function CategoryIcon({ category, size = 40, className = "" }) {
 /** Ikon akun: tile bergradien warna kartu dengan ikon jenis akun. */
 export function AccountGlyph({ account, size = 40, className = "" }) {
   const Icon = ACCOUNT_KINDS[account?.kind]?.icon || ACCOUNT_KINDS.bank.icon;
-  const c = account?.color || "#007AFF";
+  const c = account?.color || "#0EA5E9";
   return (
     <span className={`grid shrink-0 place-items-center text-white ${className}`} aria-hidden="true"
       style={{ width: size, height: size, borderRadius: size * 0.27, background: `linear-gradient(150deg, ${shade(c, 18)}, ${shade(c, -18)})` }}>
@@ -87,6 +87,11 @@ export function Avatar({ profile, size = 32 }) {
   const { personHue } = useApp();
   const name = profile?.full_name || profile?.email || "?";
   const h = personHue(profile?.id);
+  if (profile?.avatar_url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={profile.avatar_url} alt="" title={name} width={size} height={size} loading="lazy"
+      className="shrink-0 rounded-full object-cover ring-2 ring-canvas" style={{ width: size, height: size }} />;
+  }
   return (
     <span title={name} aria-hidden="true" className="grid shrink-0 place-items-center rounded-full font-semibold text-white ring-2 ring-canvas"
       style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(145deg, hsl(${h} 90% 64%), hsl(${(h + 30) % 360} 80% 46%))` }}>

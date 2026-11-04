@@ -38,12 +38,12 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4">
-      <div className="relative -mx-4 overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#2E8BFF] via-[#3A5BFF] to-[#8B4DFF] px-5 pb-14 pt-safe text-white">
+      <div className="relative -mx-4 overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#38BDF8] via-[#0EA5E9] to-[#0369A1] px-5 pb-14 pt-safe text-white">
         <div className="pointer-events-none absolute -right-16 -top-10 h-64 w-64 rounded-full bg-white/[.12]" />
         <div className="pointer-events-none absolute -bottom-24 -left-12 h-60 w-60 rounded-full bg-white/[.07]" />
         <div className="relative flex h-16 items-center gap-2.5">
           <img src="/icons/icon.svg" alt="" width={36} height={36} className="rounded-[9px] ring-1 ring-white/30" />
-          <span className="flex-1 text-[17px] font-semibold">Kantong Kita</span>
+          <span className="flex-1 text-[17px] font-semibold">Finance Tracker</span>
           <button type="button" onClick={() => setLocale(locale === "id" ? "en" : "id")} className="h-9 rounded-full bg-white/20 px-4 text-[14px] font-semibold backdrop-blur" aria-label={t("Ganti bahasa")}>
             {locale === "id" ? "English" : "Bahasa Indonesia"}
           </button>

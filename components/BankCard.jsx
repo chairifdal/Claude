@@ -10,7 +10,7 @@ export function BankCard({ account, className = "", concealed = false }) {
   const { people, user, t } = useApp();
   const kind = ACCOUNT_KINDS[account.kind] || ACCOUNT_KINDS.bank;
   const Icon = kind.icon;
-  const c = account.color || "#007AFF";
+  const c = account.color || "#0EA5E9";
   const shared = account.owner_id !== user?.id;
   const isCredit = account.kind === "credit";
   const debt = isCredit ? Math.max(0, -account.balance) : 0;

@@ -76,7 +76,7 @@ export default function ActivityPage() {
     const blob = new Blob(["﻿" + [head.map(esc).join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `kantong-kita-${toISODate(start)}_${toISODate(new Date(end - 86400000))}.csv`; // taste-skill-ignore: tanggal di nama file
+    a.download = `finance-tracker-${toISODate(start)}_${toISODate(new Date(end - 86400000))}.csv`; // taste-skill-ignore: tanggal di nama file
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -109,7 +109,7 @@ export default function ActivityPage() {
           ))}
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          {[[t("Masuk"), flow.inc, "#34C759", true], [t("Keluar"), flow.exp, "#FF3B30", false], [t("Sisa"), flow.inc - flow.exp, flow.inc - flow.exp >= 0 ? "#007AFF" : "#FF3B30", true]].map(([l, v, c, sg]) => (
+          {[[t("Masuk"), flow.inc, "#34C759", true], [t("Keluar"), flow.exp, "#FF3B30", false], [t("Sisa"), flow.inc - flow.exp, flow.inc - flow.exp >= 0 ? "#0EA5E9" : "#FF3B30", true]].map(([l, v, c, sg]) => (
             <div key={l} className="min-w-0 rounded-[14px] p-3" style={{ background: `${c}17` }}>
               <p className="text-[13px] font-semibold" style={{ color: c }}>{l}</p>
               <Money value={v} compact sign={sg} className="block text-[17px] font-bold tracking-tight" dots={4} />

@@ -15,7 +15,7 @@ const TABS = [
 const ACTIONS = [
   { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
   { type: "income", label: "Pemasukan", icon: Plus, color: "#34C759" },
-  { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#007AFF" },
+  { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#0EA5E9" },
   { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, color: "#FF9500" },
 ];
 
@@ -37,7 +37,7 @@ export default function AppChrome() {
 
   const addButton = (cls) => (
     <button onClick={() => setOpen((o) => !o)} aria-label={t("Catat")} aria-expanded={open}
-      className={`grid place-items-center rounded-full bg-gradient-to-br from-[#40A0FF] via-brand-600 to-transfer text-white shadow-lift transition-transform duration-300 active:scale-90 ${open ? "rotate-45" : ""} ${cls}`}>
+      className={`grid place-items-center rounded-full bg-gradient-to-br from-[#38BDF8] via-[#0EA5E9] to-[#0284C7] text-white shadow-lift transition-transform duration-300 active:scale-90 ${open ? "rotate-45" : ""} ${cls}`}>
       <Plus className="h-7 w-7" strokeWidth={2.6} />
     </button>
   );
@@ -85,7 +85,7 @@ export default function AppChrome() {
 
       {/* Desktop: sidebar ikon */}
       <nav aria-label="Navigasi utama" className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-line/60 bg-surface/70 py-5 backdrop-blur-xl lg:flex">
-        <Link href="/" aria-label="Kantong Kita"><Mark size={40} /></Link>
+        <Link href="/" aria-label="Finance Tracker"><Mark size={40} /></Link>
         <div className="mt-6">{addButton("h-12 w-12")}</div>
         <div className="mt-6 flex flex-col gap-2">
           {TABS.map((tab) => {

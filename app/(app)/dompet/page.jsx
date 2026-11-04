@@ -8,7 +8,7 @@ import { Money, PageHeader, Empty, AccountGlyph } from "@/components/ui";
 import WalletTile from "@/components/WalletTile";
 
 // Warna per kelompok untuk bar alokasi
-const GROUP_COLOR = { liquid: "#0A84FF", investment: "#AF52DE", credit: "#FF453A" };
+const GROUP_COLOR = { liquid: "#38BDF8", investment: "#AF52DE", credit: "#FF453A" };
 
 export default function WalletPage() {
   const { accounts, allAccounts, openAccount, hidden, toggleHidden, user, people, t } = useApp();
