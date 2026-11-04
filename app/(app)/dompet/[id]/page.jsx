@@ -97,7 +97,7 @@ export default function AccountDetail() {
             <div className="grid grid-cols-3 gap-3">
               <ActionTile icon={Minus} label={t("Keluar")} bg="linear-gradient(150deg,#FF6961,#FF3B30)" ink="#fff" onClick={() => openTx({ type: "expense", accountId: id })} />
               <ActionTile icon={Plus} label={t("Masuk")} bg="linear-gradient(150deg,#5DDB7E,#28A745)" ink="#fff" onClick={() => openTx({ type: "income", accountId: id })} />
-              <ActionTile icon={ArrowLeftRight} label={t("Transfer")} bg="linear-gradient(150deg,#40A0FF,#5856D6)" ink="#fff" onClick={() => openTx({ type: "transfer", accountId: id })} />
+              <ActionTile icon={ArrowLeftRight} label={t("Transfer")} bg="linear-gradient(150deg,#38BDF8,#0284C7)" ink="#fff" onClick={() => openTx({ type: "transfer", accountId: id })} />
             </div>
           ) : (
             <div className="card p-5">

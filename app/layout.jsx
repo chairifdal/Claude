@@ -4,10 +4,10 @@ import { themeBootScript } from "@/lib/theme-boot";
 
 
 export const metadata = {
-  title: "Kantong Kita",
+  title: "Finance Tracker",
   description: "Catat keuangan berdua: akun bersama, transfer antar pasangan, real-time.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Kantong Kita", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Finance Tracker", statusBarStyle: "default" },
   icons: {
     icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192" }],
     apple: "/icons/apple-touch-icon.png",

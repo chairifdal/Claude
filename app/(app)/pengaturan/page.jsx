@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
+import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, Camera, Trash2, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { useTheme } from "@/lib/theme";
 import PeriodSettings from "@/components/PeriodSettings";
@@ -15,6 +15,39 @@ export default function SettingsPage() {
   const { supabase, profile, invites, notify, refresh, hidden, toggleHidden, t, locale, setLocale } = useApp();
   const [name, setName] = useState(null);
   const { pref, setPref } = useTheme();
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function onPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return notify(t("Pilih file gambar"), "err");
+    setUploading(true);
+    try {
+      const blob = await resizeSquare(file, 320);
+      const path = `${profile.id}/avatar.jpg`;
+      const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg", cacheControl: "3600" });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${data.publicUrl}?v=${Date.now()}`;
+      const { error: e2 } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", profile.id);
+      if (e2) throw e2;
+      notify(t("Foto profil diperbarui"));
+      refresh();
+    } catch (err) {
+      notify(err.message || t("Gagal mengunggah foto"), "err");
+    } finally { setUploading(false); }
+  }
+
+  async function removePhoto() {
+    setUploading(true);
+    await supabase.storage.from("avatars").remove([`${profile.id}/avatar.jpg`]);
+    const { error } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", profile.id);
+    setUploading(false);
+    if (error) return notify(error.message, "err");
+    notify(t("Foto profil dihapus")); refresh();
+  }
 
   async function respond(inv, accept) {
     const { error } = await supabase.rpc("respond_invite", { invite_id: inv.id, accept });
@@ -46,7 +79,14 @@ export default function SettingsPage() {
 
       <div className="max-w-[640px] space-y-6">
         <section className="card flex items-center gap-4 p-5">
-          <Avatar profile={profile} size={56} />
+          <div className="relative flex-none">
+            <Avatar profile={profile} size={64} />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} aria-label={t("Ganti foto profil")}
+              className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-white ring-2 ring-surface active:scale-90 disabled:opacity-50">
+              <Camera className="h-3.5 w-3.5" />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
+          </div>
           <div className="min-w-0 flex-1">
             {name !== null ? (
               <input autoFocus aria-label={t("Nama")} className="field" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName}
@@ -58,6 +98,10 @@ export default function SettingsPage() {
               </button>
             )}
             <p className="mt-0.5 truncate text-[14px] text-ink-soft">{profile?.email}</p>
+            <div className="mt-1 flex items-center gap-3 text-[14px] font-medium text-brand-600">
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}>{uploading ? t("Mengunggah…") : t("Ganti foto")}</button>
+              {profile?.avatar_url && !uploading && <button onClick={removePhoto} className="flex items-center gap-1 text-expense"><Trash2 className="h-3.5 w-3.5" /> {t("Hapus")}</button>}
+            </div>
           </div>
         </section>
 
@@ -130,7 +174,7 @@ export default function SettingsPage() {
   );
 }
 
-function Row({ href, icon: Icon, label, color = "#007AFF" }) {
+function Row({ href, icon: Icon, label, color = "#0EA5E9" }) {
   return (
     <Link href={href} className="flex min-h-[52px] items-center gap-3 rounded-[14px] px-4 py-2.5 active:bg-fill">
       <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] text-white" style={{ background: color }}><Icon className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
@@ -138,4 +182,14 @@ function Row({ href, icon: Icon, label, color = "#007AFF" }) {
       <ChevronRight className="h-5 w-5 text-ink-mute" />
     </Link>
   );
+}
+
+/** Potong tengah jadi persegi lalu kecilkan, supaya unggahan ringan (~20–40 KB). */
+async function resizeSquare(file, size) {
+  const bmp = await createImageBitmap(file);
+  const side = Math.min(bmp.width, bmp.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  canvas.getContext("2d").drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, size, size);
+  return new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Gagal memproses gambar"))), "image/jpeg", 0.85));
 }

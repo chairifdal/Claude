@@ -9,7 +9,7 @@
   --ink: 0 0 0;  --ink-soft: 108 108 112;  --ink-mute: 142 142 147;
   --line: 229 229 234;  --rule: 239 239 244;  --control: 209 209 214;
   --fill: 118 118 128;  --fill-a: 0.12;  --shadow-a: 0.04;
-  --brand: 0 122 255;  --brand-50: 229 241 255;
+  --brand: 2 132 199;  --brand-50: 224 242 254;
   --income: 36 138 61;  --income-bright: 52 199 89;  --income-soft: 227 249 232;  --income-ink: 11 77 29;
   --expense: 255 59 48;  --expense-soft: 255 229 227;  --expense-ink: 142 26 19;
   --orange: 255 149 0;  --warn-soft: 255 244 224;  --warn-ink: 160 90 0;
@@ -21,7 +21,7 @@
   --ink: 255 255 255;  --ink-soft: 152 152 159;  --ink-mute: 128 128 134;
   --line: 56 56 58;  --rule: 44 44 46;  --control: 72 72 74;
   --fill: 118 118 128;  --fill-a: 0.24;  --shadow-a: 0;
-  --brand: 10 132 255;  --brand-50: 10 40 77;
+  --brand: 56 189 248;  --brand-50: 8 47 73;
   --income: 48 209 88;  --income-bright: 48 209 88;  --income-soft: 13 51 24;  --income-ink: 125 230 153;
   --expense: 255 69 58;  --expense-soft: 64 20 17;  --expense-ink: 255 160 153;
   --orange: 255 159 10;  --warn-soft: 61 40 5;  --warn-ink: 255 196 110;
@@ -36,7 +36,7 @@ input, select, textarea, button { font: inherit; letter-spacing: inherit; }
 .no-scrollbar { scrollbar-width: none; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
-:focus-visible { outline: 2px solid #007AFF; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #0284C7; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 
 @layer components {
