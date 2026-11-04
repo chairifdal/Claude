@@ -169,14 +169,17 @@ function SharePanel({ account, isOwner, onLeft }) {
   const [members, setMembers] = useState([]);
   const [pending, setPending] = useState([]);
   const [email, setEmail] = useState("");
+  const [candidates, setCandidates] = useState([]);
   const [role, setRole] = useState("editor");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const [m, i] = await Promise.all([
+    const [m, i, c] = await Promise.all([
       supabase.from("account_members").select("*").eq("account_id", account.id),
       isOwner ? supabase.from("account_invites").select("*").eq("account_id", account.id).eq("status", "pending") : Promise.resolve({ data: [] }),
+      isOwner ? supabase.rpc("list_invitable_users", { p_account_id: account.id }) : Promise.resolve({ data: [] }),
     ]);
+    setCandidates(c.data || []);
     setMembers(m.data || []);
     setPending(i.data || []);
   }, [supabase, account.id, isOwner]);
@@ -221,14 +224,17 @@ function SharePanel({ account, isOwner, onLeft }) {
     <div className="space-y-5 pb-3">
       {isOwner && (
         <form onSubmit={invite} className="space-y-3 rounded-card bg-raised p-4">
-          <label htmlFor="invite-email" className="label">{t("Email pasangan")}</label>
-          <input id="invite-email" className="field" type="email" inputMode="email" placeholder="email@pasangan.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <p className="text-[14px] text-ink-soft">{t("Pakai email yang dipakai pasanganmu untuk daftar di aplikasi ini.")}</p>
+          <label htmlFor="invite-email" className="label">{t("Pasangan")}</label>
+          <select id="invite-email" className="field" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={!candidates.length}>
+            <option value="">{candidates.length ? t("Pilih pasangan") : t("Belum ada pengguna lain")}</option>
+            {candidates.map((c) => <option key={c.id} value={c.email}>{c.full_name || c.email}</option>)}
+          </select>
+          <p className="text-[14px] text-ink-soft">{candidates.length ? t("Pilih dari pengguna yang sudah mendaftar di aplikasi ini.") : t("Minta pasanganmu mendaftar di aplikasi ini dulu, lalu dia akan muncul di daftar.")}</p>
           <div role="radiogroup" aria-label={t("Jenis akses")} className="space-y-2">
             <RoleOption value="editor" current={role} onPick={setRole} t={t} />
             <RoleOption value="viewer" current={role} onPick={setRole} t={t} />
           </div>
-          <button className="btn-primary w-full" disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Send className="h-4 w-4" /> {t("Kirim undangan")}</>}</button>
+          <button className="btn-primary w-full" disabled={busy || !email}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Send className="h-4 w-4" /> {t("Kirim undangan")}</>}</button>
         </form>
       )}
 
