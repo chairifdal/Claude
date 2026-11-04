@@ -1,7 +1,7 @@
 "use client";
 import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { dayLabel, timeLabel, firstName } from "@/lib/format";
+import { dayLabel, timeLabel, firstName, formatIDR } from "@/lib/format";
 import { Avatar, CategoryIcon, Empty, Money } from "./ui";
 
 /** Arah transaksi dari sudut pandang akun tertentu (atau semua akun yang terlihat) */
@@ -32,7 +32,7 @@ export function TxRow({ tx, perspectiveId }) {
   let title, meta, icon;
   if (tx.type === "transfer") {
     title = dir === "in" ? t("Dari {name}", { name: fromName }) : dir === "out" ? t("Ke {name}", { name: toName }) : t("{from} ke {to}", { from: fromName, to: toName });
-    meta = t("Transfer");
+    meta = tx.fee > 0 && dir !== "in" ? t("Transfer · biaya {fee}", { fee: formatIDR(tx.fee) }) : t("Transfer");
     const I = dir === "in" ? ArrowDownLeft : dir === "out" ? ArrowUpRight : ArrowLeftRight;
     icon = (
       <span className="grid h-11 w-11 shrink-0 place-items-center text-ink-soft" aria-hidden="true">
@@ -46,7 +46,7 @@ export function TxRow({ tx, perspectiveId }) {
   }
 
   // Polaritas tenang: masuk hijau dengan +, keluar tinta dengan −
-  const amount = dir === "in" ? tx.amount : dir === "out" ? -tx.amount : tx.amount;
+  const amount = dir === "in" ? tx.amount : dir === "out" ? -(tx.amount + (tx.fee || 0)) : tx.amount;
   const amountClass = dir === "in" ? "text-income" : "text-ink";
 
   return (
@@ -57,7 +57,7 @@ export function TxRow({ tx, perspectiveId }) {
         <p className="truncate text-[16px] font-medium">{title}</p>
         <p className="flex items-center gap-1.5 truncate text-[14px] text-ink-soft">
           {byOther && creator && <Avatar profile={creator} size={18} />}
-          <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || meta}</span>
+          <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || meta}{tx.recurring_id ? ` · ${t("otomatis")}` : ""}</span>
         </p>
       </div>
       <div className="flex-none text-right">

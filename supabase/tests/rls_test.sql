@@ -120,5 +120,44 @@ delete from account_members where account_id='aaaaaaaa-0000-0000-0000-0000000000
 select pg_temp.as_user('b');
 do $$ begin assert (select count(*) from accounts)=2, 'B after revoke'; end $$;
 
+-- ===== 003: biaya transfer & transaksi berulang =====
+select pg_temp.as_user('a');
+do $$ declare before numeric; begin
+  select balance into before from account_balances where id='aaaaaaaa-0000-0000-0000-000000000002';
+  insert into transactions(account_id,to_account_id,type,amount,fee) values
+   ('aaaaaaaa-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001','transfer',10000,2500);
+  assert (select balance from account_balances where id='aaaaaaaa-0000-0000-0000-000000000002') = before - 12500, 'fee reduces source';
+end $$;
+-- biaya hanya untuk transfer
+do $$ begin
+  insert into transactions(account_id,type,amount,fee) values ('aaaaaaaa-0000-0000-0000-000000000002','expense',1,1);
+  raise exception 'should not reach';
+exception when check_violation then null; end $$;
+
+-- jadwal pengeluaran tgl 1, mulai 2 bulan lalu → 3 catatan (bulan-2, bulan-1, bulan ini)
+insert into recurring(id,account_id,type,amount,day_of_month,start_date,note) values
+ ('dddddddd-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000002','expense',100000,1,
+  (date_trunc('month', now() at time zone 'Asia/Jakarta') - interval '2 month')::date,'Iuran RT');
+do $$ declare n int; begin
+  n := run_my_recurring();
+  assert n = 3, format('expected 3 runs, got %s', n);
+  assert run_my_recurring() = 0, 'idempotent';
+  assert (select count(*) from transactions where recurring_id='dddddddd-0000-0000-0000-000000000001') = 3, 'three rows';
+end $$;
+
+-- B (Lihat & transfer di Dompet Andi): boleh jadwal transfer, tidak boleh jadwal pengeluaran
+select pg_temp.as_user('b');
+insert into recurring(account_id,to_account_id,type,amount,fee,day_of_month) values
+ ('aaaaaaaa-0000-0000-0000-000000000002','bbbbbbbb-0000-0000-0000-000000000001','transfer',50000,2500,28);
+do $$ begin
+  insert into recurring(account_id,type,amount,day_of_month) values ('aaaaaaaa-0000-0000-0000-000000000002','expense',1,1);
+  raise exception 'should not reach';
+exception when insufficient_privilege then null; end $$;
+-- run_recurring langsung tidak boleh dipanggil user
+do $$ begin
+  perform run_recurring(null);
+  raise exception 'should not reach';
+exception when insufficient_privilege then null; end $$;
+
 reset role;
 \echo ALL RLS TESTS PASSED

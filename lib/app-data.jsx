@@ -5,6 +5,22 @@ import { useI18n } from "./i18n";
 
 const Ctx = createContext(null);
 const PERSON_HUES = [212, 338, 150, 32];
+export const FEE_CATEGORY = "__fee";
+
+/**
+ * Baris untuk statistik: transfer yang punya biaya ditambah satu baris pengeluaran semu
+ * (kategori "Biaya transfer") di akun asal. Daftar transaksi tetap memakai baris asli.
+ */
+export function statRows(rows) {
+  const out = [];
+  for (const r of rows) {
+    out.push(r);
+    if (r.type === "transfer" && Number(r.fee) > 0) {
+      out.push({ ...r, id: `${r.id}-fee`, type: "expense", amount: Number(r.fee), to_account_id: null, category_id: FEE_CATEGORY, isFee: true });
+    }
+  }
+  return out;
+}
 
 export function AppDataProvider({ children }) {
   const supabase = getSupabase();
@@ -24,6 +40,7 @@ export function AppDataProvider({ children }) {
   const [accountSheet, setAccountSheet] = useState(null); // { account } | {}
   const [toast, setToast] = useState(null);
   const userRef = useRef(null);
+  const ranRecurring = useRef(false);
 
   useEffect(() => {
     try { setHidden(localStorage.getItem("kk-hidden") === "1"); } catch {}
@@ -64,7 +81,13 @@ export function AppDataProvider({ children }) {
     try { saved = localStorage.getItem("kk-locale"); } catch {}
     if (mine?.locale && !saved) setLocale(mine.locale);
     setLoading(false);
-  }, [supabase, setLocale]);
+    // Cadangan untuk jadwal harian di server: catat transaksi berulang yang sudah jatuh tempo
+    if (!ranRecurring.current) {
+      ranRecurring.current = true;
+      const { data: n } = await supabase.rpc("run_my_recurring");
+      if (n > 0) { setVersion((v) => v + 1); load(); }
+    }
+  }, [supabase, setLocale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced refresh for realtime bursts
   const timer = useRef(null);
@@ -84,6 +107,7 @@ export function AppDataProvider({ children }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "account_invites" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "bills" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recurring" }, refresh)
       .subscribe();
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
@@ -104,6 +128,8 @@ export function AppDataProvider({ children }) {
     const active = accounts.filter((a) => !a.archived);
     const byId = Object.fromEntries(accounts.map((a) => [a.id, a]));
     const catById = Object.fromEntries(categories.map((c) => [c.id, c]));
+    // Kategori semu untuk biaya transfer (mis. BI-FAST), supaya terlihat di analisis
+    catById[FEE_CATEGORY] = { id: FEE_CATEGORY, name: t("Biaya transfer"), icon: "landmark", kind: "expense", color: "#64748B", parent_id: null };
     // Hue tetap per orang (urutan id stabil di kedua HP), minimal 60° berjauhan
     const order = Object.keys(people).sort();
     const personHue = (id) => PERSON_HUES[Math.max(0, order.indexOf(id)) % PERSON_HUES.length];
@@ -112,7 +138,7 @@ export function AppDataProvider({ children }) {
     const countsInStats = (tx) => tx.type !== "transfer" && byId[tx.account_id]?.include_in_totals !== false;
     const canRecord = (a) => a && (a.my_role === "owner" || a.my_role === "editor");
     return {
-      personHue, countsInStats, canRecord, bills, t, locale, setLocale,
+      statRows, personHue, countsInStats, canRecord, bills, t, locale, setLocale,
       lastAccountId: () => { try { return localStorage.getItem("kk-last-account"); } catch { return null; } },
       rememberAccount: (id) => { try { localStorage.setItem("kk-last-account", id); } catch {} },
       supabase, user, profile, people, accounts: active, allAccounts: accounts, accountById: byId,
@@ -154,7 +180,7 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
       if (toKey) q = q.lt("occurred_at", toKey);
       const { data } = await q;
       if (!cancelled) {
-        setRows((data || []).map((t) => ({ ...t, amount: Number(t.amount) })));
+        setRows((data || []).map((t) => ({ ...t, amount: Number(t.amount), fee: Number(t.fee) || 0 })));
         setLoading(false);
       }
     })();

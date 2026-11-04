@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { parseAmount, amountToInput, toLocalInput, firstName, formatIDR } from "@/lib/format";
-import { CategoryIcon, Segmented, Sheet } from "./ui";
+import { CategoryIcon, Segmented, Sheet, Switch } from "./ui";
 import AmountInput from "./AmountInput";
 import AccountPicker from "./AccountPicker";
 
 const QUICK = [10000, 20000, 50000, 100000];
+// Biaya transfer umum di Indonesia: BI-FAST Rp 2.500, transfer online antarbank Rp 6.500
+const FEES = [0, 2500, 6500];
 
 export default function TransactionSheet() {
   const { txSheet, closeTx, t } = useApp();
@@ -37,6 +39,9 @@ function TxForm({ init }) {
   const [categoryId, setCategoryId] = useState(editing?.category_id || init.categoryId || "");
   const [occurredAt, setOccurredAt] = useState(toLocalInput(editing?.occurred_at || new Date()));
   const [note, setNote] = useState(editing?.note || init.note || "");
+  const [fee, setFee] = useState(editing?.fee ? amountToInput(editing.fee) : "");
+  const [customFee, setCustomFee] = useState(!!editing?.fee && !FEES.includes(Number(editing.fee)));
+  const [repeat, setRepeat] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -58,6 +63,7 @@ function TxForm({ init }) {
 
   const destinations = accounts.filter((a) => a.id !== accountId);
   const value = parseAmount(amount);
+  const feeValue = type === "transfer" ? parseAmount(fee) : 0;
   const valid = value > 0 && accountId && (type === "transfer" ? toAccountId && toAccountId !== accountId : true);
 
   // Tanggal: Hari ini / Kemarin / tanggal lain
@@ -81,6 +87,7 @@ function TxForm({ init }) {
       category_id: type === "transfer" ? null : categoryId || null,
       occurred_at: new Date(occurredAt).toISOString(),
       note: note.trim() || null,
+      fee: feeValue,
       ...(init.billId && !editing ? { bill_id: init.billId } : {}),
     };
     const { error } = editing
@@ -88,6 +95,17 @@ function TxForm({ init }) {
       : await supabase.from("transactions").insert(payload);
     setBusy(false);
     if (error) return notify(error.message.includes("row-level") ? t("Kamu tidak punya akses untuk akun ini") : error.message, "err");
+    if (repeat && !editing) {
+      // Jadwal mulai bulan depan; catatan bulan ini sudah dibuat barusan
+      const d = new Date(occurredAt);
+      const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+      const { error: e2 } = await supabase.from("recurring").insert({
+        type, amount: value, fee: feeValue, account_id: accountId, to_account_id: payload.to_account_id,
+        category_id: payload.category_id, note: payload.note, day_of_month: d.getDate(),
+        start_date: `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`, // taste-skill-ignore: tanggal
+      });
+      if (e2) notify(e2.message, "err");
+    }
     rememberAccount(accountId);
     notify(editing ? t("Catatan diperbarui") : t("Tersimpan"));
     refresh();
@@ -109,7 +127,7 @@ function TxForm({ init }) {
           ? <button className="btn-danger" onClick={remove} disabled={busy}>{t("Yakin hapus?")}</button>
           : <button className="btn-danger w-12 px-0" onClick={() => setConfirmDelete(true)} aria-label={t("Hapus")}><Trash2 className="h-5 w-5" /></button>)}
         <button className="btn-primary flex-1" disabled={!valid || busy} onClick={save}>
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : value > 0 ? `${t("Simpan")} ${formatIDR(value)}` : t("Simpan")}
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : value > 0 ? `${t("Simpan")} ${formatIDR(value + feeValue)}` : t("Simpan")}
         </button>
       </div>
   );
@@ -141,6 +159,26 @@ function TxForm({ init }) {
       <AccountPicker id="tx-from" label={type === "transfer" ? t("Dari akun") : t("Akun")} accounts={sources} value={accountId} onChange={setAccountId} />
       {type === "transfer" && (
         <AccountPicker id="tx-to" label={t("Ke akun")} accounts={destinations} value={toAccountId} onChange={setToAccountId} placeholder={t("Pilih akun tujuan")} />
+      )}
+      {type === "transfer" && (
+        <div>
+          <p className="label">{t("Biaya transfer")}</p>
+          <div className="flex flex-wrap gap-2">
+            {FEES.map((f) => {
+              const active = !customFee && parseAmount(fee) === f;
+              return (
+                <button key={f} type="button" aria-pressed={active} onClick={() => { setFee(f ? amountToInput(f) : ""); setCustomFee(false); }}
+                  className={`chip h-10 border ${active ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>
+                  {f === 0 ? t("Gratis") : `${formatIDR(f)} · ${f === 2500 ? "BI-FAST" : t("Online")}`}
+                </button>
+              );
+            })}
+            <button type="button" aria-pressed={customFee} onClick={() => setCustomFee(true)}
+              className={`chip h-10 border ${customFee ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>{t("Lainnya")}</button>
+          </div>
+          {customFee && <AmountInput id="tx-fee" aria-label={t("Biaya transfer")} value={fee} onChange={setFee} className="mt-3" />}
+          {feeValue > 0 && <p className="mt-2 text-[14px] text-ink-soft">{t("Saldo {name} berkurang {amount}", { name: from?.name || "", amount: formatIDR(value + feeValue) })}</p>}
+        </div>
       )}
 
       {type !== "transfer" && (
@@ -196,6 +234,10 @@ function TxForm({ init }) {
         <input id="tx-note" className="field" placeholder={t("mis. belanja mingguan")} value={note} onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && save()} />
       </div>
+      {!editing && (
+        <Switch id="tx-repeat" checked={repeat} onChange={setRepeat} label={t("Ulangi tiap bulan")}
+          description={t("Dicatat otomatis setiap tanggal {day}, mulai bulan depan. Bisa diubah di Pengaturan, Transaksi berulang.", { day: new Date(occurredAt).getDate() })} />
+      )}
       {footer}
     </div>
   );

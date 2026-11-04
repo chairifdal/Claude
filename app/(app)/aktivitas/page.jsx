@@ -37,12 +37,12 @@ export default function ActivityPage() {
 
   const net = list.reduce((s, tx) => {
     const d = txDirection(tx, accountById, accountId || undefined);
-    return s + (d === "in" ? tx.amount : d === "out" ? -tx.amount : 0);
+    return s + (d === "in" ? tx.amount : d === "out" ? -(tx.amount + (tx.fee || 0)) : -(tx.fee || 0));
   }, 0);
 
   // Ekspor CSV (dibuka di Excel / Google Sheets); angka tanpa format supaya bisa dijumlah
   function exportCsv() {
-    const head = [t("Tanggal"), t("Jenis"), t("Kategori"), t("Sub-kategori"), t("Akun"), t("Ke akun"), t("Jumlah"), t("Catatan"), t("Dicatat oleh")];
+    const head = [t("Tanggal"), t("Jenis"), t("Kategori"), t("Sub-kategori"), t("Akun"), t("Ke akun"), t("Jumlah"), t("Biaya transfer"), t("Catatan"), t("Dicatat oleh")];
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = list.map((tx) => {
       const cat = categoryById[tx.category_id];
@@ -55,6 +55,7 @@ export default function ActivityPage() {
         accountById[tx.account_id]?.name || tx.account_name || "",
         tx.to_account_id ? accountById[tx.to_account_id]?.name || tx.to_account_name || "" : "",
         tx.amount,
+        tx.fee || 0,
         tx.note || "",
         firstName(people[tx.created_by]),
       ].map(esc).join(",");

@@ -7,20 +7,20 @@ import AmountInput from "@/components/AmountInput";
 import { CategoryIcon, Money, PageHeader, Sheet, Empty } from "@/components/ui";
 
 export default function BudgetPage() {
-  const { categories, categoryById, budgets, user, t, countsInStats } = useApp();
+  const { categories, categoryById, budgets, user, t, countsInStats, statRows } = useApp();
   const { start, end } = useMemo(() => monthRange(), []);
   const { rows } = useTransactions({ from: start, to: end, limit: 3000 });
   const [edit, setEdit] = useState(null);
 
   const spent = useMemo(() => {
     const m = {};
-    for (const tx of rows) {
+    for (const tx of statRows(rows)) {
       if (tx.type !== "expense" || !countsInStats(tx)) continue;
       const root = rootCategory(categoryById[tx.category_id], categoryById);
       if (root) m[root.id] = (m[root.id] || 0) + tx.amount;
     }
     return m;
-  }, [rows, categoryById, countsInStats]);
+  }, [rows, categoryById, countsInStats, statRows]);
 
   const roots = categories.filter((c) => c.owner_id === user?.id && c.kind === "expense" && !c.parent_id);
   const withBudget = budgets.map((b) => ({ ...b, cat: categoryById[b.category_id], spent: spent[b.category_id] || 0 })).filter((b) => b.cat);

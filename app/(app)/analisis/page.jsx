@@ -18,7 +18,7 @@ function loadState() {
 }
 
 export default function AnalysisPage() {
-  const { categoryById, people, user, hidden, t, countsInStats } = useApp();
+  const { categoryById, people, user, hidden, t, countsInStats, statRows } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
@@ -30,8 +30,9 @@ export default function AnalysisPage() {
 
   const data = useMemo(() => {
     const keep = (r) => countsInStats(r) && r.type === kind && (who === "all" || r.created_by === who);
-    const cur = rows.filter((r) => keep(r) && new Date(r.occurred_at) >= start);
-    const before = rows.filter((r) => keep(r) && new Date(r.occurred_at) < start);
+    const all = statRows(rows);
+    const cur = all.filter((r) => keep(r) && new Date(r.occurred_at) >= start);
+    const before = all.filter((r) => keep(r) && new Date(r.occurred_at) < start);
     const total = cur.reduce((s, r) => s + r.amount, 0);
     const prevTotal = before.reduce((s, r) => s + r.amount, 0);
 

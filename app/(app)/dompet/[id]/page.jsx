@@ -26,7 +26,7 @@ export default function AccountDetail() {
       const d = new Date(tx.occurred_at);
       if (d < start || d >= end) continue;
       const incoming = tx.type === "income" || (tx.type === "transfer" && tx.to_account_id === id);
-      if (incoming) inn += tx.amount; else out += tx.amount;
+      if (incoming) inn += tx.amount; else out += tx.amount + (tx.fee || 0);
     }
     return { inn, out };
   }, [rows, id]);

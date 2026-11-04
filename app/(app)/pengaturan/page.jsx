@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages } from "lucide-react";
+import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages, Repeat } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ROLE_LABEL } from "@/lib/constants";
 import { Avatar, PageHeader, Segmented, Switch } from "@/components/ui";
@@ -98,6 +98,7 @@ export default function SettingsPage() {
         <section className="card p-1">
           <Row href="/kategori" icon={Shapes} label={t("Kategori & sub-kategori")} />
           <Row href="/tagihan" icon={CalendarClock} label={t("Tagihan rutin")} />
+          <Row href="/berulang" icon={Repeat} label={t("Transaksi berulang")} />
           <Row href="/aktivitas" icon={ReceiptText} label={t("Semua transaksi & ekspor CSV")} />
         </section>
 

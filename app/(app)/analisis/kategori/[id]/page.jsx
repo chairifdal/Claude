@@ -21,7 +21,7 @@ function initial() {
 
 export default function CategoryDetail() {
   const { id } = useParams();
-  const { categoryById, categories, budgets, people, user, hidden, t, countsInStats } = useApp();
+  const { categoryById, categories, budgets, people, user, hidden, t, countsInStats, statRows } = useApp();
   const [{ period, anchor, who }, setSt] = useState(initial);
   const [showAll, setShowAll] = useState(false);
   const cat = categoryById[id];
@@ -36,7 +36,8 @@ export default function CategoryDetail() {
   const ids = useMemo(() => new Set(isRoot ? [id, ...categories.filter((c) => c.parent_id === id).map((c) => c.id)] : [id]), [id, isRoot, categories]);
 
   const d = useMemo(() => {
-    const inCat = rows.filter((r) => countsInStats(r) && ids.has(r.category_id) && (who === "all" || r.created_by === who));
+    const all = statRows(rows);
+    const inCat = all.filter((r) => countsInStats(r) && ids.has(r.category_id) && (who === "all" || r.created_by === who));
     const series = periods.map((p) => ({ ...p, label: periodLabel(period, p.anchor), total: 0 }));
     for (const r of inCat) {
       const dt = new Date(r.occurred_at);
@@ -45,7 +46,7 @@ export default function CategoryDetail() {
     }
     const cur = inCat.filter((r) => new Date(r.occurred_at) >= start);
     const kind = cat?.kind || "expense";
-    const allSameKind = rows.filter((r) => countsInStats(r) && r.type === kind && new Date(r.occurred_at) >= start && (who === "all" || r.created_by === who));
+    const allSameKind = all.filter((r) => countsInStats(r) && r.type === kind && new Date(r.occurred_at) >= start && (who === "all" || r.created_by === who));
     const allTotal = allSameKind.reduce((s, r) => s + r.amount, 0);
     const subs = {};
     for (const r of cur) {

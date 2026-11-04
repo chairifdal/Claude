@@ -14,7 +14,7 @@ import GoalsCard from "@/components/GoalsCard";
 
 export default function HomePage() {
   const { profile, people, accounts, hidden, toggleHidden, openAccount, categoryById, invites, user, loading, budgets, bills, accountById,
-    supabase, notify, refresh, t, countsInStats } = useApp();
+    supabase, notify, refresh, t, countsInStats, statRows } = useApp();
   const { start, end } = useMemo(() => monthRange(), []);
   const { rows: monthRows } = useTransactions({ from: start, to: end, limit: 3000 });
   const { rows: recent } = useTransactions({ limit: 5 });
@@ -29,7 +29,7 @@ export default function HomePage() {
     let income = 0, expense = 0, mine = 0, shared = 0, partnerSpent = 0;
     const byPersonShared = {};
     const byRoot = {};
-    for (const tx of monthRows) {
+    for (const tx of statRows(monthRows)) {
       if (!countsInStats(tx)) continue;
       if (tx.type === "income") income += tx.amount;
       if (tx.type !== "expense") continue;
