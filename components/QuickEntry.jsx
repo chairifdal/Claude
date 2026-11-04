@@ -39,7 +39,8 @@ export default function QuickEntry() {
     const pool = categories.filter((c) => c.kind === type && c.owner_id === ownerId);
     const used = pool.filter((c) => count[c.id]).sort((a, b) => count[b.id] - count[a.id]);
     const roots = pool.filter((c) => !c.parent_id && !count[c.id]);
-    return [...used, ...roots].slice(0, 8);
+    // Semua kategori: yang sering dipakai di depan, sisanya kategori utama; digeser ke samping bila lebih dari 8
+    return [...used, ...roots];
   }, [rows, categories, type, ownerId]);
 
   // Catatan yang berulang: kategori + nominal yang sama ≥ 2 kali
@@ -101,12 +102,12 @@ export default function QuickEntry() {
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-4 gap-1">
+      <div className="-mx-5 mt-4 grid snap-x auto-cols-[calc((100%-2.5rem-0.75rem)/4)] grid-flow-col grid-rows-2 gap-1 overflow-x-auto px-5 pb-1 no-scrollbar">
         {frequent.map((c) => {
           const active = categoryId === c.id;
           return (
             <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? "" : c.id)}
-              className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
+              className={`flex snap-start flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
               <CategoryIcon category={c} size={28} />
               <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
             </button>

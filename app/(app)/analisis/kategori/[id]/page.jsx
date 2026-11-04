@@ -60,7 +60,7 @@ export default function CategoryDetail() {
     for (const r of cur) {
       const c = categoryById[r.category_id];
       const key = c?.parent_id ? c.id : "_self";
-      subs[key] = subs[key] || { name: key === "_self" ? t("{cat} (umum)", { cat: cat?.name }) : c.name, total: 0 };
+      subs[key] = subs[key] || { name: key === "_self" ? t("{cat} (umum)", { cat: cat?.name }) : c.name, color: key === "_self" ? cat?.color : c.color, total: 0 };
       subs[key].total += r.amount;
     }
     const byPerson = {};
@@ -177,7 +177,7 @@ export default function CategoryDetail() {
                       <span className="flex-none"><Money value={s.total} className="text-[16px] font-medium" dots={5} />
                         <span className="tabular ml-2 inline-block w-10 text-right text-[14px] text-ink-soft">{Math.round((s.total / d.total) * 100)}%</span></span>
                     </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-rule"><div className="h-full rounded-full" style={{ width: `${(s.total / maxSub) * 100}%`, background: g.cat?.color || ACCENT }} /></div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-rule"><div className="h-full rounded-full" style={{ width: `${(s.total / maxSub) * 100}%`, background: s.color || cat.color || ACCENT }} /></div>
                   </li>
                 ))}
               </ul>
