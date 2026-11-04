@@ -12,7 +12,7 @@ export default function WalletTile({ account: a }) {
   const { user, people, t } = useApp();
   const kind = ACCOUNT_KINDS[a.kind] || ACCOUNT_KINDS.bank;
   const Icon = kind.icon;
-  const c = a.color || "#0EA5E9";
+  const c = a.color || "#06B6D4";
   const shared = a.owner_id !== user?.id;
   const isCredit = a.kind === "credit";
   const debt = isCredit ? Math.max(0, -a.balance) : 0;

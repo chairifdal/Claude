@@ -73,7 +73,7 @@ export function CategoryIcon({ category, size = 40, className = "" }) {
 /** Ikon akun: tile bergradien warna kartu dengan ikon jenis akun. */
 export function AccountGlyph({ account, size = 40, className = "" }) {
   const Icon = ACCOUNT_KINDS[account?.kind]?.icon || ACCOUNT_KINDS.bank.icon;
-  const c = account?.color || "#0EA5E9";
+  const c = account?.color || "#06B6D4";
   return (
     <span className={`grid shrink-0 place-items-center text-white ${className}`} aria-hidden="true"
       style={{ width: size, height: size, borderRadius: size * 0.27, background: `linear-gradient(150deg, ${shade(c, 18)}, ${shade(c, -18)})` }}>

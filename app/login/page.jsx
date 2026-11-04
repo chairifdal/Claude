@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4">
-      <div className="relative -mx-4 overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#38BDF8] via-[#0EA5E9] to-[#0369A1] px-5 pb-14 pt-safe text-white">
+      <div className="relative -mx-4 overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#2563EB] via-[#1E40AF] to-[#172554] px-5 pb-14 pt-safe text-white">
         <div className="pointer-events-none absolute -right-16 -top-10 h-64 w-64 rounded-full bg-white/[.12]" />
         <div className="pointer-events-none absolute -bottom-24 -left-12 h-60 w-60 rounded-full bg-white/[.07]" />
         <div className="relative flex h-16 items-center gap-2.5">
