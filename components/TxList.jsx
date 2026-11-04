@@ -16,22 +16,23 @@ export function txDirection(tx, accountById, perspectiveId) {
 }
 
 export function TxRow({ tx, perspectiveId }) {
-  const { accountById, categoryById, people, user, openTx } = useApp();
+  const { accountById, categoryById, people, user, openTx, t, canRecord } = useApp();
   const dir = txDirection(tx, accountById, perspectiveId);
   const cat = tx.category_id ? categoryById[tx.category_id] : null;
   const parent = cat?.parent_id ? categoryById[cat.parent_id] : null;
   const from = accountById[tx.account_id];
   const to = tx.to_account_id ? accountById[tx.to_account_id] : null;
-  const fromName = from?.name || tx.account_name || "Akun";
-  const toName = to?.name || tx.to_account_name || "Akun";
+  const fromName = from?.name || tx.account_name || t("Akun");
+  const toName = to?.name || tx.to_account_name || t("Akun");
   const creator = people[tx.created_by];
   const byOther = tx.created_by !== user?.id;
-  const canEdit = from && (from.my_role === "owner" || from.my_role === "editor");
+  // Peran "Lihat & transfer" hanya boleh mengubah transfer buatannya sendiri
+  const canEdit = from && (canRecord(from) || (tx.type === "transfer" && tx.created_by === user?.id));
 
   let title, meta, icon;
   if (tx.type === "transfer") {
-    title = dir === "in" ? `Dari ${fromName}` : dir === "out" ? `Ke ${toName}` : `${fromName} ke ${toName}`;
-    meta = "Transfer";
+    title = dir === "in" ? t("Dari {name}", { name: fromName }) : dir === "out" ? t("Ke {name}", { name: toName }) : t("{from} ke {to}", { from: fromName, to: toName });
+    meta = t("Transfer");
     const I = dir === "in" ? ArrowDownLeft : dir === "out" ? ArrowUpRight : ArrowLeftRight;
     icon = (
       <span className="grid h-11 w-11 shrink-0 place-items-center text-ink-soft" aria-hidden="true">
@@ -39,7 +40,7 @@ export function TxRow({ tx, perspectiveId }) {
       </span>
     );
   } else {
-    title = cat?.name || (tx.type === "income" ? "Pemasukan" : "Pengeluaran");
+    title = cat?.name || (tx.type === "income" ? t("Pemasukan") : t("Pengeluaran"));
     meta = [parent?.name, fromName].filter(Boolean).join(" · ");
     icon = <CategoryIcon category={cat || { color: "#94A3B8" }} size={44} />;
   }
@@ -67,8 +68,9 @@ export function TxRow({ tx, perspectiveId }) {
   );
 }
 
-export function TxGroupedList({ rows, perspectiveId, emptyText = "Belum ada transaksi", emptyHint = "Tekan + untuk mencatat yang pertama." }) {
-  if (!rows.length) return <Empty title={emptyText} text={emptyHint} />;
+export function TxGroupedList({ rows, perspectiveId, emptyText, emptyHint }) {
+  const { t } = useApp();
+  if (!rows.length) return <Empty title={emptyText || t("Belum ada transaksi")} text={emptyHint ?? t("Tekan + untuk mencatat yang pertama.")} />;
   const groups = [];
   let current = null;
   for (const tx of rows) {

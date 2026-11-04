@@ -49,6 +49,19 @@ do $$ begin
   insert into transactions(account_id,type,amount) values ('aaaaaaaa-0000-0000-0000-000000000002','expense',1000);
   raise exception 'should not reach';
 exception when insufficient_privilege then null; end $$;
+-- B (viewer = Lihat & transfer) BOLEH transfer keluar dari Dompet Andi ke Gopay miliknya
+insert into transactions(id,account_id,to_account_id,type,amount) values
+ ('cccccccc-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000002','bbbbbbbb-0000-0000-0000-000000000001','transfer',10000);
+-- ...dan boleh menghapus transfer buatannya sendiri
+delete from transactions where id='cccccccc-0000-0000-0000-000000000001';
+do $$ begin assert (select count(*) from transactions where id='cccccccc-0000-0000-0000-000000000001')=0, 'viewer delete own transfer'; end $$;
+-- viewer tidak boleh membuat tagihan di akun Andi
+do $$ begin
+  insert into bills(account_id,name,amount,due_day) values ('aaaaaaaa-0000-0000-0000-000000000002','x',1,1);
+  raise exception 'should not reach';
+exception when insufficient_privilege then null; end $$;
+-- editor boleh membuat tagihan di BCA Andi
+insert into bills(account_id,name,amount,due_day) values ('aaaaaaaa-0000-0000-0000-000000000001','Listrik',450000,20);
 
 -- B transfer dari Gopay Bunga ke BCA Andi (shared)
 insert into transactions(account_id,to_account_id,type,amount) values
@@ -85,9 +98,16 @@ do $$ begin
   assert (select role from account_members where account_id='aaaaaaaa-0000-0000-0000-000000000002')='viewer', 'role blocked';
 end $$;
 
+-- A tidak bisa menghapus transfer B secara diam-diam? A pemilik → boleh (editor/owner). Cek include_in_totals ada.
+select pg_temp.as_user('a');
+do $$ begin
+  assert (select include_in_totals from account_balances where id='aaaaaaaa-0000-0000-0000-000000000001'), 'include default';
+  assert (select count(*) from bills)=1, 'A sees bill';
+end $$;
 -- C tidak melihat apa pun milik A/B
 select pg_temp.as_user('c');
 do $$ begin
+  assert (select count(*) from bills)=0, 'C bills';
   assert (select count(*) from accounts)=0, 'C accounts';
   assert (select count(*) from transactions)=0, 'C tx';
   assert (select count(*) from profiles)=1, 'C profiles';

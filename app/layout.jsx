@@ -1,4 +1,5 @@
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 
 export const metadata = {
@@ -30,7 +31,7 @@ export default function RootLayout({ children }) {
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans"><Providers>{children}</Providers></body>
     </html>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabase } from "./supabase";
+import { useI18n } from "./i18n";
 
 const Ctx = createContext(null);
 const PERSON_HUES = [212, 338, 150, 32];
@@ -14,6 +15,8 @@ export function AppDataProvider({ children }) {
   const [people, setPeople] = useState({});
   const [invites, setInvites] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [bills, setBills] = useState([]);
+  const { locale, setLocale, t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
   const [hidden, setHidden] = useState(false);
@@ -38,12 +41,13 @@ export function AppDataProvider({ children }) {
     if (!user) { setLoading(false); return; }
     userRef.current = user;
     setUser(user);
-    const [acc, cats, profs, inv, bud] = await Promise.all([
+    const [acc, cats, profs, inv, bud, bil] = await Promise.all([
       supabase.from("account_balances").select("*").order("sort_order").order("created_at"),
       supabase.from("categories").select("*").order("sort_order").order("name"),
       supabase.from("profiles").select("*"),
       supabase.from("account_invites").select("*").eq("status", "pending").eq("email", (user.email || "").toLowerCase()),
       supabase.from("budgets").select("*"),
+      supabase.from("bills").select("*").eq("active", true).order("due_day"),
     ]);
     setAccounts((acc.data || []).map((a) => ({ ...a, balance: Number(a.balance), initial_balance: Number(a.initial_balance) })));
     setCategories(cats.data || []);
@@ -53,8 +57,14 @@ export function AppDataProvider({ children }) {
     setProfile(map[user.id] || { id: user.id, email: user.email, full_name: user.email });
     setInvites(inv.data || []);
     setBudgets((bud.data || []).map((b) => ({ ...b, amount: Number(b.amount) })));
+    setBills((bil.data || []).map((b) => ({ ...b, amount: Number(b.amount) })));
+    // Bahasa ikut profil, kecuali HP ini sudah memilih sendiri
+    const mine = map[user.id];
+    let saved = null;
+    try { saved = localStorage.getItem("kk-locale"); } catch {}
+    if (mine?.locale && !saved) setLocale(mine.locale);
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, setLocale]);
 
   // Debounced refresh for realtime bursts
   const timer = useRef(null);
@@ -73,6 +83,7 @@ export function AppDataProvider({ children }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "account_members" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "account_invites" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bills" }, refresh)
       .subscribe();
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
@@ -96,15 +107,21 @@ export function AppDataProvider({ children }) {
     // Hue tetap per orang (urutan id stabil di kedua HP), minimal 60° berjauhan
     const order = Object.keys(people).sort();
     const personHue = (id) => PERSON_HUES[Math.max(0, order.indexOf(id)) % PERSON_HUES.length];
+    // Poin 5: akun dengan include_in_totals = false tidak ikut statistik pemasukan/pengeluaran,
+    // tetapi saldonya tetap masuk total aset.
+    const countsInStats = (tx) => tx.type !== "transfer" && byId[tx.account_id]?.include_in_totals !== false;
+    const canRecord = (a) => a && (a.my_role === "owner" || a.my_role === "editor");
     return {
-      personHue,
+      personHue, countsInStats, canRecord, bills, t, locale, setLocale,
+      lastAccountId: () => { try { return localStorage.getItem("kk-last-account"); } catch { return null; } },
+      rememberAccount: (id) => { try { localStorage.setItem("kk-last-account", id); } catch {} },
       supabase, user, profile, people, accounts: active, allAccounts: accounts, accountById: byId,
       categories, categoryById: catById, invites, budgets, loading, version,
       hidden, toggleHidden, refresh, notify, toast,
       txSheet, openTx: (o = {}) => setTxSheet(o), closeTx: () => setTxSheet(null),
       accountSheet, openAccount: (o = {}) => setAccountSheet(o), closeAccount: () => setAccountSheet(null),
     };
-  }, [supabase, user, profile, people, accounts, categories, invites, budgets, loading, version,
+  }, [supabase, user, profile, people, accounts, categories, invites, budgets, bills, t, locale, setLocale, loading, version,
       hidden, toggleHidden, refresh, notify, toast, txSheet, accountSheet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

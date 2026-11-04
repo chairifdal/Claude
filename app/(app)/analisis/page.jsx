@@ -1,189 +1,213 @@
 "use client";
-import { useMemo, useState } from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell } from "recharts";
+import { ChevronRight } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
-import { monthRange, monthLabel, formatIDR, firstName } from "@/lib/format";
-import { CategoryIcon, Money, PageHeader, Segmented, Avatar, Empty } from "@/components/ui";
-import MonthSwitcher from "@/components/MonthSwitcher";
+import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
+import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
+import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui";
+import PeriodBar, { FilterChip } from "@/components/PeriodBar";
 
 const ACCENT = "#1d5fd6";
 const NEUTRAL = "#b9c2cc";
 
-export default function AnalysisPage() {
-  const { categoryById, people, hidden } = useApp();
-  const [month, setMonth] = useState(() => monthRange().start);
-  const [kind, setKind] = useState("expense");
-  const [openRoot, setOpenRoot] = useState(null);
+function loadState() {
+  try { const s = JSON.parse(sessionStorage.getItem("kk-analysis") || "null"); if (s) return { ...s, anchor: new Date(s.anchor) }; } catch {}
+  return { period: "month", anchor: new Date(), kind: "expense", who: "all", group: "category", view: "list" };
+}
 
-  const sixStart = useMemo(() => new Date(month.getFullYear(), month.getMonth() - 5, 1), [month]);
-  const { end } = useMemo(() => monthRange(month), [month]);
-  const { rows } = useTransactions({ from: sixStart, to: end, limit: 5000 });
+export default function AnalysisPage() {
+  const { categoryById, people, user, hidden, t, countsInStats } = useApp();
+  const [st, setSt] = useState(loadState);
+  const set = (patch) => setSt((s) => ({ ...s, ...patch }));
+  useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
+  const { period, anchor, kind, who, group, view } = st;
+
+  const { start, end } = periodRange(period, anchor);
+  const prev = periodRange(period, shiftPeriod(period, anchor, -1));
+  const { rows } = useTransactions({ from: prev.start, to: end, limit: 10000 });
 
   const data = useMemo(() => {
-    const key = (d) => `${d.getFullYear()}-${d.getMonth()}`;
-    const trend = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(month.getFullYear(), month.getMonth() - i, 1);
-      trend.push({ key: key(d), label: monthLabel(d, { month: "short" }), income: 0, expense: 0 });
-    }
-    const idx = Object.fromEntries(trend.map((t, i) => [t.key, i]));
-    const current = key(month);
-    const roots = {};
-    const byPerson = {};
-    let total = 0;
-    for (const t of rows) {
-      if (t.type === "transfer") continue;
-      const k = key(new Date(t.occurred_at));
-      if (idx[k] !== undefined) trend[idx[k]][t.type] += t.amount;
-      if (k !== current || t.type !== kind) continue;
-      total += t.amount;
-      const cat = categoryById[t.category_id];
-      const root = rootCategory(cat, categoryById);
-      const rk = root?.id || "none";
-      roots[rk] = roots[rk] || { id: rk, cat: root || { name: "Tanpa kategori", color: "#94A3B8" }, total: 0, subs: {} };
-      roots[rk].total += t.amount;
-      const sk = cat && cat.parent_id ? cat.id : "_self";
-      roots[rk].subs[sk] = roots[rk].subs[sk] || { name: sk === "_self" ? `${roots[rk].cat.name} (umum)` : cat.name, total: 0 };
-      roots[rk].subs[sk].total += t.amount;
-      byPerson[t.created_by] = (byPerson[t.created_by] || 0) + t.amount;
-    }
-    return {
-      trend, total,
-      roots: Object.values(roots).sort((a, b) => b.total - a.total),
-      people: Object.entries(byPerson).sort((a, b) => b[1] - a[1]),
-    };
-  }, [rows, month, kind, categoryById]);
+    const keep = (r) => countsInStats(r) && r.type === kind && (who === "all" || r.created_by === who);
+    const cur = rows.filter((r) => keep(r) && new Date(r.occurred_at) >= start);
+    const before = rows.filter((r) => keep(r) && new Date(r.occurred_at) < start);
+    const total = cur.reduce((s, r) => s + r.amount, 0);
+    const prevTotal = before.reduce((s, r) => s + r.amount, 0);
 
-  const cur = data.trend[data.trend.length - 1];
-  const prev = data.trend[data.trend.length - 2];
-  const delta = cur && prev ? cur.expense - prev.expense : 0;
-  const maxRoot = data.roots[0]?.total || 1;
-  const yMax = niceMax(Math.max(...data.trend.map((t) => Math.max(t.income, t.expense)), 0));
+    const groups = {};
+    for (const r of cur) {
+      const cat = categoryById[r.category_id];
+      const root = rootCategory(cat, categoryById);
+      const node = group === "sub" ? cat : root;
+      const key = node?.id || "none";
+      groups[key] = groups[key] || { id: key, cat: node || { name: t("Tanpa kategori"), icon: "circle" }, parent: group === "sub" && cat?.parent_id ? root : null, total: 0, n: 0 };
+      groups[key].total += r.amount; groups[key].n++;
+    }
+    const bs = buckets(period, anchor);
+    for (const r of cur) {
+      const d = new Date(r.occurred_at);
+      const b = bs.find((x) => d >= x.start && d < x.end);
+      if (b) b.total += r.amount;
+    }
+    const byPerson = {};
+    for (const r of cur) byPerson[r.created_by] = (byPerson[r.created_by] || 0) + r.amount;
+    return { total, prevTotal, groups: Object.values(groups).sort((a, b) => b.total - a.total), bs, byPerson: Object.entries(byPerson).sort((a, b) => b[1] - a[1]), count: cur.length };
+  }, [rows, kind, who, group, period, anchor, start, categoryById, countsInStats, t]);
+
+  const days = daysIn(period, anchor);
+  const avgPerDay = data.total / days;
+  const delta = data.total - data.prevTotal;
+  const worse = kind === "expense" ? delta > 0 : delta < 0;
+  const maxGroup = data.groups[0]?.total || 1;
+  const avgBucket = data.bs.length ? data.total / (period === "year" ? 12 : days) : 0;
+  const yMax = niceMax(Math.max(...data.bs.map((b) => b.total), 0));
+  const now = new Date();
+
+  const peopleOptions = [{ value: "all", label: t("Semua") }, ...Object.values(people).map((p) => ({ value: p.id, label: p.id === user?.id ? t("Saya") : firstName(p) }))];
+  const qs = `p=${period}&d=${toISODate(anchor)}&w=${who}`;
 
   return (
     <div>
-      <PageHeader title="Analisis" subtitle={`Pengeluaran ${monthLabel(month)}`} />
-      <div className="max-w-[360px]"><MonthSwitcher value={month} onChange={(d) => { setMonth(d); setOpenRoot(null); }} /></div>
+      <PageHeader title={t("Analisis")} subtitle={periodLabel(period, anchor)} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-        <section className="card p-6">
-          <div className="grid grid-cols-2 divide-x divide-line">
+      <div className="space-y-3">
+        <PeriodBar period={period} anchor={anchor} onChange={(p, a) => set({ period: p, anchor: a })} />
+        <div className="flex gap-2" aria-label={t("Filter")}>
+          <FilterChip label={t("Jenis")} value={kind} onChange={(v) => set({ kind: v })}
+            options={[{ value: "expense", label: t("Keluar") }, { value: "income", label: t("Masuk") }]} />
+          <FilterChip label={t("Orang")} value={who} onChange={(v) => set({ who: v })} options={peopleOptions} />
+          <FilterChip label={t("Kelompok")} value={group} onChange={(v) => set({ group: v })}
+            options={[{ value: "category", label: t("Kategori") }, { value: "sub", label: t("Sub-kategori") }]} />
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        {/* Kiri: ringkasan + tren (desktop selalu tampil; HP lewat tab) */}
+        <section className="card flex flex-col p-6">
+          <p className="text-[16px] text-ink-soft">{kind === "expense" ? t("Total pengeluaran") : t("Total pemasukan")}</p>
+          <Money value={data.total} className="block text-[32px] font-semibold leading-tight" />
+          <div className="mt-3 grid grid-cols-2 divide-x divide-line">
             <div className="pr-4">
-              <p className="text-[14px] text-ink-soft">Pengeluaran</p>
-              <Money value={cur?.expense} className="block text-[30px] font-semibold leading-tight" dots={5} />
-              <p className="mt-1 text-[14px] text-ink-soft">
-                {prev?.expense ? <><span className={delta > 0 ? "font-medium text-expense" : "font-medium text-income"}>{hidden ? "•••" : formatIDR(delta, { sign: true, compact: true })}</span> vs {monthLabel(new Date(month.getFullYear(), month.getMonth() - 1, 1), { month: "long" })}</> : "Belum ada data bulan lalu"}
-              </p>
+              <p className="text-[14px] text-ink-soft">{t("vs {period} lalu", { period: t(period === "week" ? "minggu" : period === "year" ? "tahun" : "bulan") })}</p>
+              {data.prevTotal ? (
+                <p className={`tabular text-[18px] font-medium ${delta === 0 ? "text-ink-soft" : worse ? "text-expense" : "text-income"}`}>
+                  {hidden ? "Rp •••" : formatIDR(delta, { sign: true, compact: true })}
+                  <span className="ml-1 text-[14px] font-normal text-ink-soft">({delta >= 0 ? "+" : ""}{Math.round((delta / data.prevTotal) * 100)}%)</span>
+                </p>
+              ) : <p className="text-[18px] text-ink-mute">—</p>}
             </div>
             <div className="pl-4">
-              <p className="text-[14px] text-ink-soft">Pemasukan</p>
-              <Money value={cur?.income} className="block text-[22px] font-medium leading-tight text-income" dots={5} />
+              <p className="text-[14px] text-ink-soft">{t("Rata-rata per hari")}</p>
+              <Money value={Math.round(avgPerDay)} compact className="block text-[18px] font-medium" dots={4} />
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-between gap-3">
-            <h2 className="section-title">Tren 6 bulan</h2>
-            <p className="flex gap-3 text-[14px] text-ink-soft">
-              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: ACCENT }} /> Keluar</span>
-              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full" style={{ background: NEUTRAL }} /> Masuk</span>
-            </p>
+          <div role="tablist" className="mt-6 flex gap-6 border-b border-line lg:hidden">
+            {[["list", t("Daftar")], ["trend", t("Tren")]].map(([v, l]) => (
+              <button key={v} role="tab" aria-selected={view === v} onClick={() => set({ view: v })}
+                className={`-mb-px border-b-2 pb-2.5 text-[16px] ${view === v ? "border-ink font-medium text-ink" : "border-transparent text-ink-soft"}`}>{l}</button>
+            ))}
           </div>
-          <div className="mt-3 h-52">
-            <ResponsiveContainer>
-              <BarChart data={data.trend} barGap={2} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="#e5e5e5" />
-                <YAxis width={44} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5}
-                  tick={{ fontSize: 12, fill: "#5c6064" }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
-                <XAxis dataKey="label" axisLine={{ stroke: "#c8cdd2" }} tickLine={false} tick={{ fontSize: 12, fill: "#5c6064" }} />
-                <Tooltip cursor={{ fill: "#f3f5f7" }} formatter={(v, n) => [hidden ? "Rp •••••" : formatIDR(v), n === "income" ? "Masuk" : "Keluar"]}
-                  contentStyle={{ borderRadius: 10, border: "1px solid #e6e6e6", boxShadow: "none", fontSize: 14 }} />
-                <Bar dataKey="expense" fill={ACCENT} radius={[4, 4, 0, 0]} maxBarSize={18} />
-                <Bar dataKey="income" fill={NEUTRAL} radius={[4, 4, 0, 0]} maxBarSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
+          <h2 className="section-title mt-6 hidden lg:block">{t("Tren")}</h2>
+
+          <div className={`${view === "trend" ? "flex" : "hidden"} mt-4 flex-1 flex-col lg:mt-2 lg:flex`}>
+            <p className="text-[14px] text-ink-soft">{period === "year" ? t("Per bulan") : t("Per hari")} · <span className="inline-flex items-center gap-1.5"><i className="inline-block h-0 w-4 border-t border-dashed border-ink-soft" /> {t("rata-rata")} {hidden ? "" : formatIDR(Math.round(avgBucket), { compact: true })}</span></p>
+            <div className="mt-3 h-56 min-h-56 flex-1">
+              <ResponsiveContainer>
+                <BarChart data={data.bs} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="#e5e5e5" />
+                  <YAxis width={44} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5}
+                    tick={{ fontSize: 12, fill: "#5c6064" }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
+                  <XAxis dataKey="label" axisLine={{ stroke: "#c8cdd2" }} tickLine={false} tick={{ fontSize: 12, fill: "#5c6064" }}
+                    interval={period === "month" ? 4 : 0} />
+                  <Tooltip cursor={{ fill: "#f3f5f7" }} formatter={(v) => [hidden ? "Rp •••••" : formatIDR(v), kind === "expense" ? t("Keluar") : t("Masuk")]}
+                    contentStyle={{ borderRadius: 10, border: "1px solid #e6e6e6", boxShadow: "none", fontSize: 14 }} />
+                  {avgBucket > 0 && <ReferenceLine y={avgBucket} stroke="#5c6064" strokeDasharray="4 4" />}
+                  <Bar dataKey="total" radius={[3, 3, 0, 0]} maxBarSize={period === "month" ? 10 : 28}>
+                    {data.bs.map((b, i) => <Cell key={i} fill={b.start <= now && now < b.end ? ACCENT : b.start > now ? "#eef1f4" : NEUTRAL} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {data.bs.some((b) => b.total > 0) && (() => {
+              const peak = [...data.bs].sort((a, b) => b.total - a.total)[0];
+              return <p className="mt-2 text-[14px] text-ink-soft">{t("Tertinggi: {label}, {amount}", { label: peak.label, amount: hidden ? "Rp •••" : formatIDR(peak.total) })}</p>;
+            })()}
+          </div>
+
+          <div className={`${view === "list" ? "block" : "hidden"} lg:hidden`}>
+            <GroupList data={data} maxGroup={maxGroup} qs={qs} t={t} />
           </div>
         </section>
 
-        <div className="space-y-6">
-          <section className="card p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="section-title">Per kategori</h2>
-              <Segmented value={kind} onChange={(k) => { setKind(k); setOpenRoot(null); }} className="w-[220px]" options={[
-                { value: "expense", label: "Keluar" },
-                { value: "income", label: "Masuk" },
-              ]} />
-            </div>
-            {data.roots.length === 0 ? (
-              <div className="mt-4"><Empty title="Tidak ada transaksi" text={`Belum ada ${kind === "expense" ? "pengeluaran" : "pemasukan"} di ${monthLabel(month)}.`} /></div>
-            ) : (
-              <ul className="mt-4 space-y-1">
-                {data.roots.map((r, i) => {
-                  const open = openRoot === r.id;
-                  const subs = Object.values(r.subs).sort((a, b) => b.total - a.total);
-                  const hasSubs = subs.length > 1 || !subs[0]?.name.endsWith("(umum)");
-                  return (
-                    <li key={r.id} className={`rounded-control ${open ? "bg-raised" : ""}`}>
-                      <button onClick={() => hasSubs && setOpenRoot(open ? null : r.id)} aria-expanded={hasSubs ? open : undefined}
-                        className="flex w-full items-center gap-3 px-2 py-2.5 text-left">
-                        <CategoryIcon category={r.cat} size={40} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="truncate text-[16px]">{r.cat.name}</span>
-                            <span className="flex-none">
-                              <Money value={r.total} className="text-[16px] font-medium" dots={5} />
-                              <span className="tabular ml-2 inline-block w-10 text-right text-[14px] text-ink-soft">{Math.round((r.total / data.total) * 100)}%</span>
-                            </span>
-                          </div>
-                          <div className="mt-1.5 h-1.5 rounded-full bg-rule">
-                            <div className="h-full rounded-full" style={{ width: `${(r.total / maxRoot) * 100}%`, background: i === 0 ? ACCENT : NEUTRAL }} />
-                          </div>
-                        </div>
-                        {hasSubs ? (open ? <ChevronDown className="h-4 w-4 text-ink-mute" /> : <ChevronRight className="h-4 w-4 text-ink-mute" />) : <span className="w-4" />}
-                      </button>
-                      {open && (
-                        <ul className="space-y-2 pb-3 pl-[64px] pr-9">
-                          {subs.map((s) => (
-                            <li key={s.name} className="flex items-baseline justify-between gap-2 text-[14px]">
-                              <span className="truncate text-ink-soft">{s.name}</span>
-                              <Money value={s.total} className="flex-none font-medium" dots={4} />
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
+        {/* Kanan (desktop): daftar kategori + per orang dalam satu kartu */}
+        <section className="card hidden flex-col p-6 lg:flex">
+          <h2 className="section-title">{group === "sub" ? t("Sub-kategori") : t("Kategori")}</h2>
+          <GroupList data={data} maxGroup={maxGroup} qs={qs} t={t} />
+          <div className="mt-auto border-t border-rule pt-5">
+            <PersonList data={data} people={people} user={user} who={who} set={set} t={t} />
+          </div>
+        </section>
 
-          {data.people.length > 1 && (
-            <section className="card p-6">
-              <h2 className="section-title">Dicatat oleh</h2>
-              <ul className="mt-3 space-y-3">
-                {data.people.map(([id, v]) => (
-                  <li key={id} className="flex items-center gap-3">
-                    <Avatar profile={people[id]} size={32} />
-                    <span className="flex-1 text-[16px]">{firstName(people[id]) || "Mantan anggota"}</span>
-                    <Money value={v} className="text-[16px] font-medium" dots={5} />
-                    <span className="tabular w-10 text-right text-[14px] text-ink-soft">{Math.round((v / data.total) * 100)}%</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
+        <section className="card p-6 lg:hidden">
+          <PersonList data={data} people={people} user={user} who={who} set={set} t={t} />
+        </section>
       </div>
     </div>
   );
 }
 
-/** Puncak sumbu yang bulat dan di atas nilai maksimum */
-function niceMax(v) {
-  if (v <= 0) return 100000;
-  const pow = Math.pow(10, Math.floor(Math.log10(v)));
-  const steps = [1, 2, 2.5, 5, 10];
-  for (const s of steps) if (s * pow * 1.0001 > v * 1.05) return s * pow;
-  return 10 * pow;
+function GroupList({ data, maxGroup, qs, t }) {
+  if (!data.groups.length) return <div className="mt-4"><Empty title={t("Tidak ada transaksi")} text={t("Belum ada catatan di periode ini dengan filter tersebut.")} /></div>;
+  return (
+    <ul className="mt-3">
+      {data.groups.map((g, i) => (
+        <li key={g.id}>
+          <Link href={g.id === "none" ? "#" : `/analisis/kategori/${g.id}?${qs}`} aria-disabled={g.id === "none"}
+            className="flex items-center gap-3 rounded-control px-1 py-2.5 hover:bg-raised">
+            <CategoryIcon category={g.cat} size={36} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate text-[16px]">{g.cat.name}{g.parent && <span className="text-ink-soft"> · {g.parent.name}</span>}</span>
+                <span className="flex-none">
+                  <Money value={g.total} className="text-[16px] font-medium" dots={5} />
+                  <span className="tabular ml-2 inline-block w-10 text-right text-[14px] text-ink-soft">{Math.round((g.total / data.total) * 100)}%</span>
+                </span>
+              </div>
+              <div className="mt-1.5 h-1.5 rounded-full bg-rule">
+                <div className="h-full rounded-full" style={{ width: `${(g.total / maxGroup) * 100}%`, background: i === 0 ? ACCENT : NEUTRAL }} />
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 flex-none text-ink-mute" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PersonList({ data, people, user, who, set, t }) {
+  return (
+    <>
+      <h2 className="section-title">{t("Per orang")}</h2>
+      {data.byPerson.length === 0 ? (
+        <p className="mt-3 text-[14px] text-ink-soft">{t("Belum ada catatan.")}</p>
+      ) : (
+        <ul className="mt-3 space-y-3">
+          {data.byPerson.map(([id, v]) => (
+            <li key={id}>
+              <button onClick={() => set({ who: who === id ? "all" : id })} className="flex w-full items-center gap-3 text-left">
+                <Avatar profile={people[id]} size={32} />
+                <span className="flex-1 text-[16px]">{id === user?.id ? t("Saya") : firstName(people[id]) || t("Mantan anggota")}</span>
+                <Money value={v} className="text-[16px] font-medium" dots={5} />
+                <span className="tabular w-10 text-right text-[14px] text-ink-soft">{Math.round((v / data.total) * 100)}%</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-4 text-[14px] text-ink-soft">{t("{n} catatan di periode ini", { n: data.count })}</p>
+    </>
+  );
 }

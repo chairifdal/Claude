@@ -2,24 +2,25 @@
 import { useMemo, useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
-import { monthRange, groupDigits, parseAmount } from "@/lib/format";
+import { monthRange, amountToInput, parseAmount, formatIDR } from "@/lib/format";
+import AmountInput from "@/components/AmountInput";
 import { CategoryIcon, Money, PageHeader, Sheet, Empty } from "@/components/ui";
 
 export default function BudgetPage() {
-  const { categories, categoryById, budgets, user } = useApp();
+  const { categories, categoryById, budgets, user, t, countsInStats } = useApp();
   const { start, end } = useMemo(() => monthRange(), []);
   const { rows } = useTransactions({ from: start, to: end, limit: 3000 });
   const [edit, setEdit] = useState(null);
 
   const spent = useMemo(() => {
     const m = {};
-    for (const t of rows) {
-      if (t.type !== "expense") continue;
-      const root = rootCategory(categoryById[t.category_id], categoryById);
-      if (root) m[root.id] = (m[root.id] || 0) + t.amount;
+    for (const tx of rows) {
+      if (tx.type !== "expense" || !countsInStats(tx)) continue;
+      const root = rootCategory(categoryById[tx.category_id], categoryById);
+      if (root) m[root.id] = (m[root.id] || 0) + tx.amount;
     }
     return m;
-  }, [rows, categoryById]);
+  }, [rows, categoryById, countsInStats]);
 
   const roots = categories.filter((c) => c.owner_id === user?.id && c.kind === "expense" && !c.parent_id);
   const withBudget = budgets.map((b) => ({ ...b, cat: categoryById[b.category_id], spent: spent[b.category_id] || 0 })).filter((b) => b.cat);
@@ -31,24 +32,29 @@ export default function BudgetPage() {
 
   return (
     <div>
-      <PageHeader title="Anggaran" subtitle={`Bulan ini, ${daysLeft} hari lagi`} />
+      <PageHeader title={t("Anggaran")} subtitle={t("Bulan ini, {n} hari lagi", { n: daysLeft })} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">
           <section className="card p-6">
-            <p className="text-[16px] text-ink-soft">Sisa dari semua anggaran</p>
+            <p className="text-[16px] text-ink-soft">{t("Sisa dari semua anggaran")}</p>
             <Money value={totalBudget - totalSpent} className={`mt-1 block text-[34px] font-semibold leading-tight ${totalSpent > totalBudget ? "text-expense" : ""}`} />
             <PlanTrack spent={totalSpent} plan={totalBudget} className="mt-4" />
             <p className="mt-2 flex justify-between text-[14px] text-ink-soft">
-              <span>Terpakai <Money value={totalSpent} dots={4} className="text-ink" /></span>
-              <span>dari <Money value={totalBudget} dots={4} className="text-ink" /></span>
+              <span>{t("Terpakai")} <Money value={totalSpent} dots={4} className="text-ink" /></span>
+              <span>{t("dari")} <Money value={totalBudget} dots={4} className="text-ink" /></span>
             </p>
+            {totalBudget > totalSpent && (
+              <p className="mt-3 text-[16px] text-ink-soft">
+                {t("Aman dipakai")} <Money value={Math.floor((totalBudget - totalSpent) / daysLeft)} className="font-medium text-ink" dots={4} /> {t("per hari sampai akhir bulan")}
+              </p>
+            )}
           </section>
 
           <section>
-            <h2 className="section-title mb-2">Per kategori</h2>
+            <h2 className="section-title mb-2">{t("Per kategori")}</h2>
             {withBudget.length === 0 ? (
-              <Empty title="Belum ada anggaran" text="Pilih kategori di daftar untuk menetapkan batas bulanan." />
+              <Empty title={t("Belum ada anggaran")} text={t("Pilih kategori di daftar untuk menetapkan batas bulanan.")} />
             ) : (
               <div className="card p-1">
                 {withBudget.sort((a, b) => b.spent / b.amount - a.spent / a.amount).map((b) => {
@@ -61,7 +67,7 @@ export default function BudgetPage() {
                         <div className="flex items-baseline justify-between gap-2">
                           <p className="truncate text-[16px] font-medium">{b.cat.name}</p>
                           <p className={`flex-none text-[14px] ${over ? "font-medium text-expense" : near ? "font-medium text-warn-ink" : "text-ink-soft"}`}>
-                            {over ? "Lewat " : "Sisa "}<Money value={Math.abs(b.amount - b.spent)} dots={4} />
+                            {over ? t("Lewat") : t("Sisa")} <Money value={Math.abs(b.amount - b.spent)} dots={4} />
                           </p>
                         </div>
                         <PlanTrack spent={b.spent} plan={b.amount} className="mt-2" />
@@ -77,16 +83,16 @@ export default function BudgetPage() {
 
         {without.length > 0 && (
           <section>
-            <h2 className="section-title mb-2">Belum dianggarkan</h2>
+            <h2 className="section-title mb-2">{t("Belum dianggarkan")}</h2>
             <div className="card p-1">
               {without.map((c) => (
                 <button key={c.id} onClick={() => setEdit({ cat: c })} className="flex min-h-[60px] w-full items-center gap-3 rounded-control px-3 py-2 text-left hover:bg-canvas">
                   <CategoryIcon category={c} size={36} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[16px]">{c.name}</span>
-                    <span className="block text-[14px] text-ink-soft">{spent[c.id] ? <>Terpakai <Money value={spent[c.id]} dots={4} /></> : "Belum ada pengeluaran"}</span>
+                    <span className="block text-[14px] text-ink-soft">{spent[c.id] ? <>{t("Terpakai")} <Money value={spent[c.id]} dots={4} /></> : t("Belum ada pengeluaran")}</span>
                   </span>
-                  <span className="flex-none text-[14px] font-medium text-brand-700">Atur</span>
+                  <span className="flex-none text-[14px] font-medium text-brand-700">{t("Atur")}</span>
                 </button>
               ))}
             </div>
@@ -116,8 +122,8 @@ function PlanTrack({ spent, plan, className = "" }) {
 }
 
 function BudgetForm({ cat, budget, onDone }) {
-  const { supabase, user, notify, refresh } = useApp();
-  const [amount, setAmount] = useState(budget ? groupDigits(String(budget.amount)) : "");
+  const { supabase, user, notify, refresh, t } = useApp();
+  const [amount, setAmount] = useState(budget ? amountToInput(budget.amount) : "");
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -128,27 +134,27 @@ function BudgetForm({ cat, budget, onDone }) {
     );
     setBusy(false);
     if (error) return notify(error.message, "err");
-    notify("Anggaran disimpan"); refresh(); onDone();
+    notify(t("Anggaran disimpan")); refresh(); onDone();
   }
   async function remove() {
     await supabase.from("budgets").delete().eq("id", budget.id);
-    notify("Anggaran dihapus"); refresh(); onDone();
+    notify(t("Anggaran dihapus")); refresh(); onDone();
   }
 
   return (
     <div className="space-y-4 pb-3">
       <div className="flex items-center gap-3 rounded-control bg-canvas p-3">
         <CategoryIcon category={cat} size={44} />
-        <p className="text-[14px] text-ink-soft">Termasuk semua sub-kategori dan transaksi pasangan di akun bersama milikmu.</p>
+        <p className="text-[14px] text-ink-soft">{t("Termasuk semua sub-kategori dan transaksi pasangan di akun bersama milikmu.")}</p>
       </div>
       <div>
-        <span className="label">Batas per bulan</span>
-        <input autoFocus className="field tabular text-[20px] font-semibold" inputMode="numeric" placeholder="Rp 0" value={amount} onChange={(e) => setAmount(groupDigits(e.target.value))} />
+        <label htmlFor="budget-amount" className="label">{t("Batas per bulan")}</label>
+        <AmountInput id="budget-amount" autoFocus value={amount} onChange={setAmount} />
       </div>
       <div className="flex gap-2">
-        {budget && <button className="btn-danger px-4" onClick={remove} aria-label="Hapus"><Trash2 className="h-5 w-5" /></button>}
+        {budget && <button className="btn-danger px-4" onClick={remove} aria-label={t("Hapus")}><Trash2 className="h-5 w-5" /></button>}
         <button className="btn-primary flex-1" disabled={busy || !parseAmount(amount)} onClick={save}>
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : "Simpan"}
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : t("Simpan")}
         </button>
       </div>
     </div>

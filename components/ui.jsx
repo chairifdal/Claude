@@ -14,7 +14,12 @@ export function Money({ value, sign, compact, className = "", dots = 7 }) {
   return <span className={`tabular whitespace-nowrap ${className}`}>{formatIDR(value, { sign, compact })}</span>;
 }
 
-export function Sheet({ open, onClose, title, children }) {
+/**
+ * Panel bawah (default) atau layar penuh di HP (`full`). Di desktop selalu dialog di tengah.
+ * `footer` menempel di bawah, jadi tombol simpan selalu terlihat.
+ */
+export function Sheet({ open, onClose, title, children, footer, full = false }) {
+  const { t } = useApp();
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -25,18 +30,22 @@ export function Sheet({ open, onClose, title, children }) {
   }, [open, onClose]);
 
   if (!open) return null;
+  const panel = full
+    ? "h-[100dvh] max-h-none rounded-none lg:h-auto lg:max-h-[90dvh] lg:rounded-card"
+    : "max-h-[92dvh] rounded-t-card lg:rounded-card";
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 animate-fade-in bg-ink/40" onClick={onClose} />
-      <div className="relative flex max-h-[92dvh] w-full max-w-md animate-sheet-up flex-col rounded-t-card bg-white shadow-float lg:rounded-card">
-        <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-control lg:hidden" />
-        <div className="flex items-center justify-between px-5 pb-2 pt-3">
-          <h2 className="text-[20px] font-semibold">{title}</h2>
-          <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full text-ink-soft hover:bg-canvas" aria-label="Tutup">
+      <div className={`relative flex w-full max-w-md animate-sheet-up flex-col bg-white shadow-float lg:max-w-lg ${panel}`}>
+        {!full && <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-control lg:hidden" />}
+        <div className={`flex items-center gap-2 px-4 pb-2 ${full ? "pt-safe" : "pt-3"}`}>
+          <h2 className="min-w-0 flex-1 truncate pl-1 text-[20px] font-semibold">{title}</h2>
+          <button onClick={onClose} className="grid h-11 w-11 flex-none place-items-center rounded-full text-ink-soft hover:bg-canvas" aria-label={t("Tutup")}>
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 pb-safe no-scrollbar">{children}</div>
+        <div className={`flex-1 overflow-y-auto px-5 no-scrollbar ${footer || full ? "" : "pb-safe"}`}>{children}</div>
+        {footer && <div className="border-t border-line bg-white px-5 pt-3 pb-safe">{footer}</div>}
       </div>
     </div>
   );
@@ -153,4 +162,21 @@ export function hexToHsl(hex) {
     h *= 60;
   }
   return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+/** Saklar on/off dengan judul dan penjelasan; warna aktif near-black (bukan aksen). */
+export function Switch({ id, checked, onChange, label, description }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p id={`${id}-label`} className="text-[16px] font-medium">{label}</p>
+        {description && <p id={`${id}-desc`} className="mt-1 text-[14px] text-ink-soft">{description}</p>}
+      </div>
+      <button id={id} type="button" role="switch" aria-checked={checked} aria-labelledby={`${id}-label`}
+        aria-describedby={description ? `${id}-desc` : undefined} onClick={() => onChange(!checked)}
+        className={`relative mt-0.5 h-7 w-12 flex-none rounded-full transition-colors ${checked ? "bg-ink" : "bg-control"}`}>
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-[left] ${checked ? "left-6" : "left-1"}`} />
+      </button>
+    </div>
+  );
 }

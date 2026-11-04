@@ -2,12 +2,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BankCard } from "./BankCard";
+import { useApp } from "@/lib/app-data";
 
 const PEEK = 48;
+// Maksimal 4 kartu di belakang supaya kartu depan tetap utuh di layar HP; sisanya lewat titik navigasi
+const MAX_BACK = 4;
 
 /** Tumpukan kartu: ketuk kartu belakang untuk ke depan, geser untuk berganti, ketuk kartu depan untuk detail. */
 export default function WalletStack({ accounts }) {
   const router = useRouter();
+  const { t } = useApp();
   const [active, setActive] = useState(accounts[0]?.id);
   const touch = useRef(null);
 
@@ -17,7 +21,8 @@ export default function WalletStack({ accounts }) {
 
   if (!accounts.length) return null;
   const idx = Math.max(0, accounts.findIndex((a) => a.id === active));
-  const ordered = [...accounts.filter((a) => a.id !== active), accounts[idx]];
+  const back = accounts.filter((a) => a.id !== active);
+  const ordered = [...back.slice(Math.max(0, back.length - MAX_BACK)), accounts[idx]];
 
   function cycle(dir) {
     setActive(accounts[(idx + dir + accounts.length) % accounts.length].id);
@@ -31,7 +36,7 @@ export default function WalletStack({ accounts }) {
           const isFront = a.id === active;
           return (
             <button key={a.id} type="button"
-              aria-label={isFront ? `Buka ${a.name}` : `Tampilkan ${a.name}`}
+              aria-label={isFront ? t("Buka {name}", { name: a.name }) : t("Tampilkan {name}", { name: a.name })}
               onClick={() => (isFront ? router.push(`/dompet/${a.id}`) : setActive(a.id))}
               onTouchStart={isFront ? (e) => { touch.current = e.touches[0].clientX; } : undefined}
               onTouchEnd={isFront ? (e) => {

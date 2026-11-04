@@ -7,7 +7,7 @@ import { Money } from "./ui";
 
 /** Kartu fisik akun: warna flat milik akun, rasio kartu asli (85.6 × 54 mm). */
 export function BankCard({ account, className = "", concealed = false }) {
-  const { people, user } = useApp();
+  const { people, user, t } = useApp();
   const kind = ACCOUNT_KINDS[account.kind] || ACCOUNT_KINDS.bank;
   const Icon = kind.icon;
   const shared = account.owner_id !== user?.id;
@@ -25,20 +25,20 @@ export function BankCard({ account, className = "", concealed = false }) {
           <p className="min-w-0 flex-1 truncate text-[18px] font-semibold">{account.name}</p>
           {shared ? (
             <span className="chip bg-white/20 py-1 text-[14px] text-white">
-              <Users className="h-3.5 w-3.5" /> {firstName(people[account.owner_id])} · {ROLE_LABEL[account.my_role]}
+              <Users className="h-3.5 w-3.5" /> {firstName(people[account.owner_id])} · {t(ROLE_LABEL[account.my_role])}
             </span>
           ) : account.member_count > 0 ? (
-            <span className="chip bg-white/20 py-1 text-[14px] text-white"><Users className="h-3.5 w-3.5" /> Dibagikan</span>
+            <span className="chip bg-white/20 py-1 text-[14px] text-white"><Users className="h-3.5 w-3.5" /> {t("Dibagikan")}</span>
           ) : null}
         </div>
         <p className="mt-1 text-[14px] text-white/80">
-          {kind.label}{account.account_number ? ` · •••• ${account.account_number}` : ""}
+          {t(kind.label)}{account.include_in_totals === false ? ` · ${t("tidak dihitung")}` : ""}
         </p>
 
         <div className={`mt-auto ${concealed ? "invisible" : ""}`} aria-hidden={concealed || undefined}>
           {isCredit ? (
             <>
-              <p className="text-[14px] text-white/80">Tagihan</p>
+              <p className="text-[14px] text-white/80">{t("Tagihan")}</p>
               <Money value={debt} className="block text-[30px] font-semibold leading-tight" />
               {limit > 0 && (
                 <div className="mt-2">
@@ -46,8 +46,8 @@ export function BankCard({ account, className = "", concealed = false }) {
                     {usage > 0 && <div className="h-full rounded-full bg-white" style={{ width: `${usage * 100}%` }} />}
                   </div>
                   <p className="mt-1 flex justify-between text-[14px] text-white/85">
-                    <span>Terpakai <Money value={debt} compact dots={4} /></span>
-                    <span>Limit <Money value={limit} compact dots={4} /></span>
+                    <span>{t("Terpakai")} <Money value={debt} compact dots={4} /></span>
+                    <span>{t("Limit")} <Money value={limit} compact dots={4} /></span>
                   </p>
                 </div>
               )}
@@ -55,7 +55,7 @@ export function BankCard({ account, className = "", concealed = false }) {
           ) : (
             <>
               <div className="mb-3 h-7 w-10 rounded-[5px] bg-[#e8c770]" aria-hidden="true" />
-              <p className="text-[14px] text-white/80">Saldo</p>
+              <p className="text-[14px] text-white/80">{t("Saldo")}</p>
               <Money value={account.balance} className="block text-[30px] font-semibold leading-tight" />
             </>
           )}

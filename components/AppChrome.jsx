@@ -26,7 +26,8 @@ export function Mark({ size = 32 }) {
 
 export default function AppChrome() {
   const pathname = usePathname();
-  const { openTx, openAccount, invites } = useApp();
+  const { openTx, openAccount, invites, t } = useApp();
+  const tr = t;
   const [open, setOpen] = useState(false);
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
@@ -37,7 +38,7 @@ export default function AppChrome() {
   }
 
   const addButton = (cls) => (
-    <button onClick={() => setOpen((o) => !o)} aria-label="Catat" aria-expanded={open}
+    <button onClick={() => setOpen((o) => !o)} aria-label={t("Catat")} aria-expanded={open}
       className={`grid place-items-center rounded-full bg-brand-600 text-white transition-transform duration-200 active:scale-95 ${open ? "rotate-45" : ""} ${cls}`}>
       <Plus className="h-7 w-7" strokeWidth={2} />
     </button>
@@ -57,7 +58,7 @@ export default function AppChrome() {
                   <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: a.bg, color: a.ink }}>
                     <Icon className="h-5 w-5" strokeWidth={2} />
                   </span>
-                  <span className="text-[16px] font-medium">{a.label}</span>
+                  <span className="text-[16px] font-medium">{t(a.label)}</span>
                 </button>
               );
             })}
@@ -76,7 +77,7 @@ export default function AppChrome() {
               <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}
                 className={`flex h-14 flex-col items-center justify-center gap-0.5 ${active ? "text-ink" : "text-ink-mute"}`}>
                 <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2 : 1.6} />
-                <span className={`text-[12px] ${active ? "font-semibold" : "font-medium"}`}>{t.label}</span>
+                <span className={`text-[12px] ${active ? "font-semibold" : "font-medium"}`}>{tr(t.label)}</span>
               </Link>
             );
           })}
@@ -93,14 +94,14 @@ export default function AppChrome() {
             const Icon = t.icon;
             const active = isActive(t.href);
             return (
-              <Link key={t.href} href={t.href} title={t.label} aria-label={t.label} aria-current={active ? "page" : undefined}
+              <Link key={t.href} href={t.href} title={tr(t.label)} aria-label={tr(t.label)} aria-current={active ? "page" : undefined}
                 className={`grid h-10 w-10 place-items-center rounded-control ${active ? "bg-[#e9ecef] text-ink" : "text-ink-mute hover:text-ink"}`}>
                 <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </Link>
             );
           })}
         </div>
-        <Link href="/pengaturan" title="Pengaturan" aria-label="Pengaturan"
+        <Link href="/pengaturan" title={tr("Pengaturan")} aria-label={tr("Pengaturan")}
           className={`relative mt-auto grid h-10 w-10 place-items-center rounded-control ${isActive("/pengaturan") ? "bg-[#e9ecef] text-ink" : "text-ink-mute hover:text-ink"}`}>
           <Settings className="h-[18px] w-[18px]" strokeWidth={1.75} />
           {invites.length > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-expense" />}
