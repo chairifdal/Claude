@@ -37,25 +37,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4 pt-safe">
-      <div className="flex h-16 items-center gap-2.5">
-        <img src="/icons/icon.svg" alt="" width={32} height={32} className="rounded-[9px]" />
-        <span className="flex-1 text-[16px] font-semibold">Kantong Kita</span>
-        <button type="button" onClick={() => setLocale(locale === "id" ? "en" : "id")} className="h-10 rounded-full border border-control px-4 text-[14px] font-medium" aria-label={t("Ganti bahasa")}>
-          {locale === "id" ? "English" : "Bahasa Indonesia"}
-        </button>
+    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-4">
+      <div className="relative -mx-4 overflow-hidden rounded-b-[36px] bg-gradient-to-br from-[#2E8BFF] via-[#3A5BFF] to-[#8B4DFF] px-5 pb-14 pt-safe text-white">
+        <div className="pointer-events-none absolute -right-16 -top-10 h-64 w-64 rounded-full bg-white/[.12]" />
+        <div className="pointer-events-none absolute -bottom-24 -left-12 h-60 w-60 rounded-full bg-white/[.07]" />
+        <div className="relative flex h-16 items-center gap-2.5">
+          <img src="/icons/icon.svg" alt="" width={36} height={36} className="rounded-[9px] ring-1 ring-white/30" />
+          <span className="flex-1 text-[17px] font-semibold">Kantong Kita</span>
+          <button type="button" onClick={() => setLocale(locale === "id" ? "en" : "id")} className="h-9 rounded-full bg-white/20 px-4 text-[14px] font-semibold backdrop-blur" aria-label={t("Ganti bahasa")}>
+            {locale === "id" ? "English" : "Bahasa Indonesia"}
+          </button>
+        </div>
+        <h1 className="relative mt-10 text-[34px] font-bold leading-[1.1] tracking-tight">{t("Keuangan berdua, satu kantong")}</h1>
+        <p className="relative mt-3 text-[17px] leading-relaxed text-white/85">
+          {t("Bagikan rekening dan pocket ke pasangan, catat bareng, dan lihat setiap catatan muncul di HP masing-masing saat itu juga.")}
+        </p>
       </div>
 
-      <h1 className="mt-10 text-[32px] font-semibold leading-[1.15]">{t("Keuangan berdua, satu kantong")}</h1>
-      <p className="mt-3 text-[16px] leading-relaxed text-ink-soft">
-        {t("Bagikan rekening dan pocket ke pasangan, catat bareng, dan lihat setiap catatan muncul di HP masing-masing saat itu juga.")}
-      </p>
-
-      <div className="card mt-8 p-5">
-        <div role="tablist" className="grid grid-cols-2 gap-1 rounded-full bg-[#eef1f4] p-1">
+      <div className="card relative -mt-8 p-5">
+        <div role="tablist" className="grid grid-cols-2 gap-0.5 rounded-[10px] bg-fill p-[2px]">
           {[["login", t("Masuk")], ["signup", t("Daftar")]].map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => { setMode(k); setMsg(null); }}
-              className={`h-10 rounded-full text-[14px] font-medium transition ${mode === k ? "border border-line bg-white text-ink" : "text-ink-soft"}`}>
+              className={`h-9 rounded-[8px] text-[15px] transition ${mode === k ? "bg-white font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
               {l}
             </button>
           ))}

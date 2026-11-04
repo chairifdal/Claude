@@ -46,7 +46,7 @@ export default function AccountDetail() {
       <PageHeader title={account.name} subtitle={isOwner ? t("Akun saya") : t("Akun bersama")} back="/dompet"
         right={isOwner && <button className="icon-btn" onClick={() => openAccount({ account })} aria-label={t("Ubah")}><Pencil className="h-5 w-5" /></button>} />
 
-      <div className="grid gap-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
         <div className="space-y-4">
           <BankCard account={account} />
 
@@ -83,9 +83,9 @@ export default function AccountDetail() {
 
           {canWrite ? (
             <div className="grid grid-cols-3 gap-3">
-              <ActionTile icon={Minus} label={t("Keluar")} bg="#eef1f4" ink="#1b1d1f" onClick={() => openTx({ type: "expense", accountId: id })} />
-              <ActionTile icon={Plus} label={t("Masuk")} bg="#dcfae5" ink="#04250e" onClick={() => openTx({ type: "income", accountId: id })} />
-              <ActionTile icon={ArrowLeftRight} label={t("Transfer")} bg="#dcf1ff" ink="#0a3a80" onClick={() => openTx({ type: "transfer", accountId: id })} />
+              <ActionTile icon={Minus} label={t("Keluar")} bg="linear-gradient(150deg,#FF6961,#FF3B30)" ink="#fff" onClick={() => openTx({ type: "expense", accountId: id })} />
+              <ActionTile icon={Plus} label={t("Masuk")} bg="linear-gradient(150deg,#5DDB7E,#28A745)" ink="#fff" onClick={() => openTx({ type: "income", accountId: id })} />
+              <ActionTile icon={ArrowLeftRight} label={t("Transfer")} bg="linear-gradient(150deg,#40A0FF,#5856D6)" ink="#fff" onClick={() => openTx({ type: "transfer", accountId: id })} />
             </div>
           ) : (
             <div className="card p-5">
@@ -110,14 +110,14 @@ export default function AccountDetail() {
                 {isOwner ? (account.member_count > 0 ? t("{n} orang punya akses", { n: account.member_count }) : t("Undang pasangan untuk melihat atau mencatat")) : t("Akses kamu: {role}", { role: t(ROLE_LABEL[account.my_role]) })}
               </span>
             </span>
-            <span className="flex-none text-[14px] font-medium text-brand-700">{isOwner ? t("Atur") : t("Lihat")}</span>
+            <span className="flex-none text-[14px] font-medium text-brand-600">{isOwner ? t("Atur") : t("Lihat")}</span>
           </button>
         </div>
 
         <section>
           <div className="mb-2 flex items-baseline justify-between">
             <h2 className="section-title">{t("Riwayat")}</h2>
-            {rows.length > 8 && <Link href={`/aktivitas?akun=${id}`} className="text-[14px] font-medium text-brand-700">{t("Semua {n}", { n: rows.length })}</Link>}
+            {rows.length > 8 && <Link href={`/aktivitas?akun=${id}`} className="text-[14px] font-medium text-brand-600">{t("Semua {n}", { n: rows.length })}</Link>}
           </div>
           <TxGroupedList rows={rows.slice(0, 8)} perspectiveId={id} emptyText={t("Belum ada transaksi di akun ini")} />
         </section>
@@ -132,9 +132,9 @@ export default function AccountDetail() {
 
 function ActionTile({ icon: Icon, label, onClick, bg, ink }) {
   return (
-    <button onClick={onClick} className="flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-card transition active:scale-[.97]" style={{ background: bg, color: ink }}>
+    <button onClick={onClick} className="flex h-[84px] flex-col items-center justify-center gap-1.5 rounded-card shadow-card transition active:scale-[.95]" style={{ background: bg, color: ink }}>
       <Icon className="h-6 w-6" strokeWidth={1.75} />
-      <span className="text-[14px] font-medium">{label}</span>
+      <span className="text-[15px] font-semibold">{label}</span>
     </button>
   );
 }
@@ -143,7 +143,7 @@ function RoleOption({ value, current, onPick, t }) {
   const active = value === current;
   return (
     <button type="button" role="radio" aria-checked={active} onClick={() => onPick(value)}
-      className={`w-full rounded-control border p-3 text-left ${active ? "border-ink bg-white ring-1 ring-ink" : "border-line bg-white"}`}>
+      className={`w-full rounded-control border p-3 text-left ${active ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600" : "border-line bg-white"}`}>
       <span className="block text-[16px] font-medium">{t(ROLE_LABEL[value])}</span>
       <span className="mt-0.5 block text-[14px] text-ink-soft">{t(ROLE_HINT[value])}</span>
     </button>
@@ -227,7 +227,7 @@ function SharePanel({ account, isOwner, onLeft }) {
               <p className="truncate text-[16px] font-medium">{owner?.full_name || t("Pemilik")} {owner?.id === user.id && <span className="text-ink-mute">({t("kamu")})</span>}</p>
               <p className="truncate text-[14px] text-ink-soft">{owner?.email}</p>
             </div>
-            <span className="chip bg-[#eef1f4] py-1 text-[#3a3d40]"><Crown className="h-3.5 w-3.5" /> {t("Pemilik")}</span>
+            <span className="chip bg-fill py-1 text-[#3a3d40]"><Crown className="h-3.5 w-3.5" /> {t("Pemilik")}</span>
           </div>
           {members.map((m) => {
             const p = people[m.user_id];
@@ -250,7 +250,7 @@ function SharePanel({ account, isOwner, onLeft }) {
                     </button>
                   </div>
                 ) : (
-                  <span className="chip bg-[#eef1f4] py-1 text-[#3a3d40]">{t(ROLE_LABEL[m.role])}</span>
+                  <span className="chip bg-fill py-1 text-[#3a3d40]">{t(ROLE_LABEL[m.role])}</span>
                 )}
               </div>
             );

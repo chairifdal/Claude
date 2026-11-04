@@ -20,7 +20,7 @@ const path = require("path");
     // Tanpa sudut membulat untuk iOS/maskable (OS yang memotong)
     const body = s.radius ? svg : svg.replace(/rx="114"/g, 'rx="0"');
     await page.setViewportSize({ width: s.size, height: s.size });
-    await page.setContent(`<html><body style="margin:0;background:${s.pad ? "#1d5fd6" : "transparent"};display:grid;place-items:center;width:${s.size}px;height:${s.size}px">
+    await page.setContent(`<html><body style="margin:0;background:${s.pad ? "#3A5BFF" : "transparent"};display:grid;place-items:center;width:${s.size}px;height:${s.size}px">
       <div style="width:${inner}px;height:${inner}px">${body.replace("<svg ", `<svg width="${inner}" height="${inner}" `)}</div></body></html>`);
     await page.screenshot({ path: out(s.file), omitBackground: !s.pad });
   }

@@ -3,28 +3,29 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-html, body { background: #f3f5f7; color: #1b1d1f; }
-body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; font-size: 16px; }
+html, body { background: #F2F2F7; color: #000; }
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; font-size: 17px; letter-spacing: -0.01em; }
 * { -webkit-font-smoothing: antialiased; }
-input, select, textarea, button { font: inherit; }
+input, select, textarea, button { font: inherit; letter-spacing: inherit; }
 .tabular, .num { font-variant-numeric: tabular-nums; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
-:focus-visible { outline: 2px solid #1d5fd6; outline-offset: 2px; }
+:focus-visible { outline: 2px solid #007AFF; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 
 @layer components {
-  /* Kartu: permukaan putih, 1px border, radius 20 */
-  .card { @apply rounded-card border border-line bg-white; }
-  .chip { @apply inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[14px] font-medium transition; }
-  .field { @apply h-12 w-full rounded-control border border-line bg-white px-4 text-[16px] text-ink outline-none transition placeholder:text-ink-mute focus:border-brand-500; }
-  .label { @apply mb-2 block text-[14px] font-medium text-ink; }
-  .btn { @apply inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-[16px] font-semibold transition active:scale-[.98] disabled:opacity-50 disabled:active:scale-100; }
-  .btn-primary { @apply btn bg-ink text-white hover:bg-black; }
-  .btn-ghost { @apply btn border border-control bg-white text-ink hover:bg-canvas; }
-  .btn-danger { @apply btn border border-control bg-white text-expense; }
-  .icon-btn { @apply grid h-11 w-11 place-items-center rounded-full text-ink-soft transition hover:bg-white active:scale-95; }
-  .section-title { @apply text-[20px] font-medium text-ink; }
+  /* Kartu & daftar berkelompok ala iOS */
+  .card { @apply rounded-card bg-white shadow-card; }
+  .chip { @apply inline-flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[15px] font-medium transition active:scale-95; }
+  .field { @apply h-12 w-full rounded-control border-0 bg-fill px-4 text-[17px] text-ink outline-none transition placeholder:text-ink-mute focus:bg-white focus:ring-2 focus:ring-brand-600; }
+  .label { @apply mb-2 block pl-1 text-[13px] font-medium uppercase tracking-wide text-ink-soft; }
+  .btn { @apply inline-flex h-[50px] items-center justify-center gap-2 rounded-[14px] px-5 text-[17px] font-semibold transition active:scale-[.98] active:opacity-80 disabled:opacity-40 disabled:active:scale-100; }
+  .btn-primary { @apply btn bg-brand-600 text-white shadow-lift; }
+  .btn-ghost { @apply btn bg-fill text-brand-600; }
+  .btn-danger { @apply btn bg-expense-soft text-expense; }
+  .icon-btn { @apply grid h-10 w-10 place-items-center rounded-full bg-fill text-brand-600 transition active:scale-90; }
+  .section-title { @apply text-[22px] font-bold tracking-tight text-ink; }
+  .link { @apply text-[17px] font-normal text-brand-600; }
 }

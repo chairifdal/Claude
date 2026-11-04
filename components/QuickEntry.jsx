@@ -94,7 +94,7 @@ export default function QuickEntry() {
           {repeats.map((r) => (
             <button key={`${r.categoryId}${r.amount}`} type="button"
               onClick={() => { setAmount(amountToInput(r.amount)); setCategoryId(r.categoryId); if (writable.some((a) => a.id === r.accountId)) setAccountId(r.accountId); }}
-              className="chip h-9 border border-control bg-white text-ink">
+              className="chip h-9 border border-transparent bg-fill text-ink">
               <RotateCcw className="h-3.5 w-3.5 text-ink-soft" /> {categoryById[r.categoryId].name} {formatIDR(r.amount, { compact: true })}
             </button>
           ))}
@@ -106,7 +106,7 @@ export default function QuickEntry() {
           const active = categoryId === c.id;
           return (
             <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? "" : c.id)}
-              className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-ink" : "border-transparent hover:bg-canvas"}`}>
+              className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
               <CategoryIcon category={c} size={28} />
               <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
             </button>

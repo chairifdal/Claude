@@ -9,8 +9,8 @@ import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui"
 import PeriodBar from "@/components/PeriodBar";
 import { TxRow } from "@/components/TxList";
 
-const ACCENT = "#1d5fd6";
-const NEUTRAL = "#b9c2cc";
+const ACCENT = "#007AFF";
+const NEUTRAL = "#B3D7FF";
 
 function initial() {
   const q = new URLSearchParams(window.location.search);
@@ -82,13 +82,13 @@ export default function CategoryDetail() {
       <div className="space-y-3">
         <PeriodBar period={period} anchor={anchor} onChange={(p, a) => setSt((s) => ({ ...s, period: p, anchor: a }))} />
         {who !== "all" && (
-          <button className="chip h-10 border border-ink bg-ink text-white" onClick={() => setSt((s) => ({ ...s, who: "all" }))}>
+          <button className="chip h-10 border border-brand-600 bg-brand-600 text-white" onClick={() => setSt((s) => ({ ...s, who: "all" }))}>
             {who === user?.id ? t("Saya") : firstName(people[who])} · {t("tampilkan semua")}
           </button>
         )}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="card flex flex-col p-6">
             <p className="text-[16px] text-ink-soft">{periodLabel(period, anchor)}</p>
             <Money value={d.total} className="block text-[32px] font-semibold leading-tight" />
@@ -168,7 +168,7 @@ export default function CategoryDetail() {
                       <span className="flex-none"><Money value={s.total} className="text-[16px] font-medium" dots={5} />
                         <span className="tabular ml-2 inline-block w-10 text-right text-[14px] text-ink-soft">{Math.round((s.total / d.total) * 100)}%</span></span>
                     </div>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-rule"><div className="h-full rounded-full" style={{ width: `${(s.total / maxSub) * 100}%`, background: i === 0 ? ACCENT : NEUTRAL }} /></div>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-rule"><div className="h-full rounded-full" style={{ width: `${(s.total / maxSub) * 100}%`, background: g.cat?.color || ACCENT }} /></div>
                   </li>
                 ))}
               </ul>
@@ -194,7 +194,7 @@ export default function CategoryDetail() {
             <div className="flex items-baseline justify-between">
               <h2 className="section-title">{t("Catatan")}</h2>
               {d.cur.length > 6 && (
-                <button className="text-[14px] font-medium text-brand-700" onClick={() => setShowAll((v) => !v)}>
+                <button className="text-[14px] font-medium text-brand-600" onClick={() => setShowAll((v) => !v)}>
                   {showAll ? t("Lebih sedikit") : t("Semua {n}", { n: d.cur.length })}
                 </button>
               )}

@@ -19,7 +19,7 @@ export default function BillsCard({ monthRows, limit = 5 }) {
     <section className="card p-5" aria-labelledby="bills-title">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="bills-title" className="section-title">{t("Tagihan bulan ini")}</h2>
-        <Link href="/tagihan" className="text-[14px] font-medium text-brand-700">{t("Atur")}</Link>
+        <Link href="/tagihan" className="text-[14px] font-medium text-brand-600">{t("Atur")}</Link>
       </div>
       {items.length === 0 ? (
         <div className="mt-3"><Empty title={t("Belum ada tagihan rutin")} text={t("Tambahkan listrik, internet, SPP, atau cicilan supaya tidak ada yang terlewat.")}
@@ -46,7 +46,7 @@ export default function BillsCard({ monthRows, limit = 5 }) {
                   </div>
                   <div className="w-[68px] flex-none text-right">
                     {s.state !== "paid" && canRecord(acc) && (
-                      <button className="h-9 rounded-full border border-control px-3 text-[14px] font-medium"
+                      <button className="h-8 rounded-full bg-brand-600 px-3.5 text-[14px] font-semibold text-white active:opacity-70"
                         onClick={() => openTx({ type: "expense", accountId: b.account_id, amount: b.amount, categoryId: b.category_id, note: b.name, billId: b.id })}>
                         {t("Bayar")}
                       </button>

@@ -34,7 +34,7 @@ export default function BudgetPage() {
     <div>
       <PageHeader title={t("Anggaran")} subtitle={t("Bulan ini, {n} hari lagi", { n: daysLeft })} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">
           <section className="card p-6">
             <p className="text-[16px] text-ink-soft">{t("Sisa dari semua anggaran")}</p>
@@ -92,7 +92,7 @@ export default function BudgetPage() {
                     <span className="block truncate text-[16px]">{c.name}</span>
                     <span className="block text-[14px] text-ink-soft">{spent[c.id] ? <>{t("Terpakai")} <Money value={spent[c.id]} dots={4} /></> : t("Belum ada pengeluaran")}</span>
                   </span>
-                  <span className="flex-none text-[14px] font-medium text-brand-700">{t("Atur")}</span>
+                  <span className="flex-none text-[14px] font-medium text-brand-600">{t("Atur")}</span>
                 </button>
               ))}
             </div>

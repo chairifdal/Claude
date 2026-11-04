@@ -19,7 +19,7 @@ export default function AppLayout({ children }) {
   }
   return (
     <AppDataProvider>
-      <div className="lg:pl-14">
+      <div className="lg:pl-[72px]">
         <main className="mx-auto min-h-[100dvh] max-w-md px-4 pb-32 lg:max-w-[1100px] lg:px-10 lg:pb-16 lg:pt-6">{children}</main>
       </div>
       <AppChrome />

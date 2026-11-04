@@ -44,8 +44,8 @@ export default function WalletStack({ accounts }) {
                 if (Math.abs(dx) > 50) { e.preventDefault(); cycle(dx < 0 ? 1 : -1); }
                 touch.current = null;
               } : undefined}
-              className="absolute inset-x-0 top-0 block rounded-card border-2 border-canvas text-left transition-transform duration-300 [transition-timing-function:cubic-bezier(.2,.9,.25,1)]"
-              style={{ transform: `translateY(${i * PEEK}px)`, zIndex: i + 1 }}>
+              className="absolute inset-x-0 top-0 block rounded-[22px] text-left transition-transform duration-300 [transition-timing-function:cubic-bezier(.2,.9,.25,1)]"
+              style={{ transform: `translateY(${i * PEEK}px)`, zIndex: i + 1, filter: isFront ? "drop-shadow(0 18px 24px rgba(0,0,0,.22))" : "drop-shadow(0 -2px 8px rgba(0,0,0,.12))" }}>
               <BankCard account={a} concealed={!isFront} />
             </button>
           );
@@ -55,7 +55,7 @@ export default function WalletStack({ accounts }) {
         <div className="mt-3 flex items-center justify-center gap-1.5">
           {accounts.map((a) => (
             <button key={a.id} onClick={() => setActive(a.id)} aria-label={a.name} className="grid h-6 place-items-center px-0.5">
-              <span className={`block h-1.5 rounded-full transition-[width] ${a.id === active ? "w-5 bg-ink" : "w-1.5 bg-control"}`} />
+              <span className={`block h-1.5 rounded-full transition-[width] ${a.id === active ? "w-5 bg-brand-600" : "w-1.5 bg-control"}`} />
             </button>
           ))}
         </div>

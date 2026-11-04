@@ -12,22 +12,20 @@ const TABS = [
   { href: "/anggaran", label: "Anggaran", icon: Target },
 ];
 
-// Tint pucat + tinta gelap per aksi; pengeluaran netral (tanpa merah untuk pengeluaran biasa)
 const ACTIONS = [
-  { type: "expense", label: "Pengeluaran", icon: Minus, bg: "#eef1f4", ink: "#1b1d1f" },
-  { type: "income", label: "Pemasukan", icon: Plus, bg: "#dcfae5", ink: "#04250e" },
-  { type: "transfer", label: "Transfer / kirim ke pasangan", icon: ArrowLeftRight, bg: "#dcf1ff", ink: "#0a3a80" },
-  { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, bg: "#eef1f4", ink: "#1b1d1f" },
+  { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
+  { type: "income", label: "Pemasukan", icon: Plus, color: "#34C759" },
+  { type: "transfer", label: "Transfer / kirim ke pasangan", icon: ArrowLeftRight, color: "#007AFF" },
+  { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, color: "#FF9500" },
 ];
 
 export function Mark({ size = 32 }) {
-  return <img src="/icons/icon.svg" alt="" width={size} height={size} className="rounded-[9px]" />;
+  return <img src="/icons/icon.svg" alt="" width={size} height={size} style={{ borderRadius: size * 0.23 }} />;
 }
 
 export default function AppChrome() {
   const pathname = usePathname();
   const { openTx, openAccount, invites, t } = useApp();
-  const tr = t;
   const [open, setOpen] = useState(false);
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
@@ -39,72 +37,72 @@ export default function AppChrome() {
 
   const addButton = (cls) => (
     <button onClick={() => setOpen((o) => !o)} aria-label={t("Catat")} aria-expanded={open}
-      className={`grid place-items-center rounded-full bg-brand-600 text-white transition-transform duration-200 active:scale-95 ${open ? "rotate-45" : ""} ${cls}`}>
-      <Plus className="h-7 w-7" strokeWidth={2} />
+      className={`grid place-items-center rounded-full bg-gradient-to-br from-[#40A0FF] via-brand-600 to-transfer text-white shadow-lift transition-transform duration-300 active:scale-90 ${open ? "rotate-45" : ""} ${cls}`}>
+      <Plus className="h-7 w-7" strokeWidth={2.6} />
     </button>
   );
 
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-40 animate-fade-in bg-ink/50" onClick={() => setOpen(false)}>
-          <div className="absolute inset-x-0 bottom-28 mx-auto flex max-w-md flex-col items-end gap-3 px-5 pb-safe lg:bottom-auto lg:left-20 lg:right-auto lg:top-20 lg:items-start lg:px-0">
-            {ACTIONS.map((a, i) => {
-              const Icon = a.icon;
-              return (
-                <button key={a.type} onClick={(e) => { e.stopPropagation(); pick(a); }}
-                  className="flex animate-pop-in items-center gap-3 rounded-full bg-white py-1.5 pl-1.5 pr-5 shadow-float lg:flex-row"
-                  style={{ animationDelay: `${i * 30}ms` }}>
-                  <span className="grid h-11 w-11 place-items-center rounded-full" style={{ background: a.bg, color: a.ink }}>
-                    <Icon className="h-5 w-5" strokeWidth={2} />
-                  </span>
-                  <span className="text-[16px] font-medium">{t(a.label)}</span>
-                </button>
-              );
-            })}
+        <div className="fixed inset-0 z-40 animate-fade-in bg-black/25 backdrop-blur-[6px]" onClick={() => setOpen(false)}>
+          <div className="absolute inset-x-0 bottom-28 mx-auto flex max-w-md justify-center px-6 pb-safe lg:bottom-auto lg:left-20 lg:right-auto lg:top-20 lg:block lg:px-0">
+            <div className="w-full max-w-[300px] animate-pop-in overflow-hidden rounded-[14px] bg-white/90 shadow-float backdrop-blur-2xl">
+              {ACTIONS.map((a, i) => {
+                const Icon = a.icon;
+                return (
+                  <button key={a.type} onClick={(e) => { e.stopPropagation(); pick(a); }}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-black/5 ${i ? "border-t border-black/10" : ""}`}>
+                    <span className="grid h-8 w-8 place-items-center rounded-[8px] text-white" style={{ background: a.color }}>
+                      <Icon className="h-[18px] w-[18px]" strokeWidth={2.6} />
+                    </span>
+                    <span className="text-[17px]">{t(a.label)}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Phone: bar bawah dengan tombol catat di tengah */}
-      <nav aria-label="Navigasi utama" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white pb-safe lg:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-1.5">
-          {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map((t) => {
-            if (!t) return <div key="add" className="flex justify-center pb-1">{addButton("-mt-6 h-14 w-14 ring-4 ring-white")}</div>;
-            const Icon = t.icon;
-            const active = isActive(t.href);
+      {/* HP: tab bar tembus pandang ala iOS */}
+      <nav aria-label="Navigasi utama" className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/75 pb-safe backdrop-blur-xl backdrop-saturate-150 lg:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-5 items-end px-1 pt-1">
+          {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map((tab) => {
+            if (!tab) return <div key="add" className="flex justify-center">{addButton("-mt-5 h-[58px] w-[58px] ring-[5px] ring-white/80")}</div>;
+            const Icon = tab.icon;
+            const active = isActive(tab.href);
             return (
-              <Link key={t.href} href={t.href} aria-current={active ? "page" : undefined}
-                className={`flex h-14 flex-col items-center justify-center gap-0.5 ${active ? "text-ink" : "text-ink-mute"}`}>
-                <Icon className="h-[22px] w-[22px]" strokeWidth={active ? 2 : 1.6} />
-                <span className={`text-[12px] ${active ? "font-semibold" : "font-medium"}`}>{tr(t.label)}</span>
+              <Link key={tab.href} href={tab.href} aria-current={active ? "page" : undefined}
+                className={`flex h-[52px] flex-col items-center justify-center gap-0.5 ${active ? "text-brand-600" : "text-ink-mute"}`}>
+                <Icon className="h-6 w-6" strokeWidth={active ? 2.4 : 1.9} fill={active ? "currentColor" : "none"} fillOpacity={active ? 0.15 : 0} />
+                <span className="text-[10.5px] font-medium tracking-normal">{t(tab.label)}</span>
               </Link>
             );
           })}
         </div>
       </nav>
 
-      {/* Desktop: icon rail */}
-      <nav aria-label="Navigasi utama" className="fixed inset-y-0 left-0 z-40 hidden w-14 flex-col items-center border-r border-line bg-canvas py-4 lg:flex">
-        <Link href="/" aria-label="Kantong Kita"><Mark size={32} /></Link>
-        <div className="my-4 h-px w-5 bg-line" />
-        {addButton("h-10 w-10")}
-        <div className="mt-4 flex flex-col gap-1">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = isActive(t.href);
+      {/* Desktop: sidebar ikon */}
+      <nav aria-label="Navigasi utama" className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-black/5 bg-white/70 py-5 backdrop-blur-xl lg:flex">
+        <Link href="/" aria-label="Kantong Kita"><Mark size={40} /></Link>
+        <div className="mt-6">{addButton("h-12 w-12")}</div>
+        <div className="mt-6 flex flex-col gap-2">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = isActive(tab.href);
             return (
-              <Link key={t.href} href={t.href} title={tr(t.label)} aria-label={tr(t.label)} aria-current={active ? "page" : undefined}
-                className={`grid h-10 w-10 place-items-center rounded-control ${active ? "bg-[#e9ecef] text-ink" : "text-ink-mute hover:text-ink"}`}>
-                <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              <Link key={tab.href} href={tab.href} title={t(tab.label)} aria-label={t(tab.label)} aria-current={active ? "page" : undefined}
+                className={`grid h-12 w-12 place-items-center rounded-[14px] transition ${active ? "bg-brand-600 text-white shadow-lift" : "text-ink-mute hover:bg-fill"}`}>
+                <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
               </Link>
             );
           })}
         </div>
-        <Link href="/pengaturan" title={tr("Pengaturan")} aria-label={tr("Pengaturan")}
-          className={`relative mt-auto grid h-10 w-10 place-items-center rounded-control ${isActive("/pengaturan") ? "bg-[#e9ecef] text-ink" : "text-ink-mute hover:text-ink"}`}>
-          <Settings className="h-[18px] w-[18px]" strokeWidth={1.75} />
-          {invites.length > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-expense" />}
+        <Link href="/pengaturan" title={t("Pengaturan")} aria-label={t("Pengaturan")}
+          className={`relative mt-auto grid h-12 w-12 place-items-center rounded-[14px] ${isActive("/pengaturan") ? "bg-brand-600 text-white" : "text-ink-mute hover:bg-fill"}`}>
+          <Settings className="h-[22px] w-[22px]" />
+          {invites.length > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-expense ring-2 ring-white" />}
         </Link>
       </nav>
     </>

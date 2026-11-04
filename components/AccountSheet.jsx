@@ -89,7 +89,7 @@ function AccountForm({ account }) {
             const active = kind === k;
             return (
               <button key={k} type="button" onClick={() => setKind(k)} aria-pressed={active}
-                className={`flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-[14px] font-medium transition ${active ? "border-ink bg-white text-ink ring-1 ring-ink" : "border-line text-ink-soft"}`}>
+                className={`flex flex-col items-center gap-1 rounded-control border px-2 py-3 text-[14px] font-medium transition ${active ? "border-brand-600 bg-brand-50 text-brand-600 ring-1 ring-brand-600" : "border-line text-ink-soft"}`}>
                 <Icon className="h-5 w-5" /> <span className="text-center leading-tight">{t(v.label.split(" /")[0])}</span>
               </button>
             );

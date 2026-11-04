@@ -35,8 +35,8 @@ export function TxRow({ tx, perspectiveId }) {
     meta = tx.fee > 0 && dir !== "in" ? t("Transfer · biaya {fee}", { fee: formatIDR(tx.fee) }) : t("Transfer");
     const I = dir === "in" ? ArrowDownLeft : dir === "out" ? ArrowUpRight : ArrowLeftRight;
     icon = (
-      <span className="grid h-11 w-11 shrink-0 place-items-center text-ink-soft" aria-hidden="true">
-        <I style={{ width: 22, height: 22 }} strokeWidth={1.6} />
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[12px] bg-gradient-to-br from-[#7A78FF] to-transfer text-white" aria-hidden="true">
+        <I style={{ width: 22, height: 22 }} strokeWidth={2.2} />
       </span>
     );
   } else {
@@ -54,14 +54,14 @@ export function TxRow({ tx, perspectiveId }) {
       className="flex min-h-[72px] w-full items-center gap-3 rounded-control px-3 py-3 text-left transition enabled:hover:bg-canvas">
       {icon}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[16px] font-medium">{title}</p>
+        <p className="truncate text-[17px]">{title}</p>
         <p className="flex items-center gap-1.5 truncate text-[14px] text-ink-soft">
           {byOther && creator && <Avatar profile={creator} size={18} />}
           <span className="truncate">{byOther && creator ? `${firstName(creator)} · ` : ""}{tx.note || meta}{tx.recurring_id ? ` · ${t("otomatis")}` : ""}</span>
         </p>
       </div>
       <div className="flex-none text-right">
-        <Money value={amount} sign={dir === "in"} className={`block text-[16px] font-medium ${amountClass}`} dots={5} />
+        <Money value={amount} sign={dir === "in"} className={`block text-[17px] font-semibold ${amountClass}`} dots={5} />
         <p className="tabular text-[14px] text-ink-soft">{timeLabel(tx.occurred_at)}</p>
       </div>
     </button>
@@ -82,7 +82,7 @@ export function TxGroupedList({ rows, perspectiveId, emptyText, emptyHint }) {
     <div className="space-y-5">
       {groups.map((g) => (
         <section key={g.key}>
-          <h3 className="mb-2 text-[14px] font-medium text-ink-soft">{dayLabel(g.date)}</h3>
+          <h3 className="mb-1.5 pl-4 text-[13px] font-medium uppercase tracking-wide text-ink-soft">{dayLabel(g.date)}</h3>
           <div className="card p-1">
             {g.items.map((tx) => <TxRow key={tx.id} tx={tx} perspectiveId={perspectiveId} />)}
           </div>

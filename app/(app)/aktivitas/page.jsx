@@ -88,7 +88,7 @@ export default function ActivityPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           {FILTERS.map((f) => (
             <button key={f.value} onClick={() => setFilter(f.value)} aria-pressed={filter === f.value}
-              className={`chip h-10 shrink-0 border ${filter === f.value ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>{t(f.label)}</button>
+              className={`chip h-10 shrink-0 border ${filter === f.value ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>{t(f.label)}</button>
           ))}
         </div>
         <div className="my-4 flex items-center justify-between gap-3 text-[14px] text-ink-soft">

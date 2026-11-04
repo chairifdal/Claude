@@ -151,7 +151,7 @@ function TxForm({ init }) {
         <div className="mt-3 flex flex-wrap gap-2">
           {QUICK.map((q) => (
             <button key={q} type="button" onClick={() => setAmount(amountToInput(value + q))}
-              className="chip h-9 border border-control bg-white text-ink">+{formatIDR(q, { compact: true }).replace("Rp ", "")}</button>
+              className="chip h-9 border border-transparent bg-fill text-ink">+{formatIDR(q, { compact: true }).replace("Rp ", "")}</button>
           ))}
         </div>
       </div>
@@ -168,13 +168,13 @@ function TxForm({ init }) {
               const active = !customFee && parseAmount(fee) === f;
               return (
                 <button key={f} type="button" aria-pressed={active} onClick={() => { setFee(f ? amountToInput(f) : ""); setCustomFee(false); }}
-                  className={`chip h-10 border ${active ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>
+                  className={`chip h-10 border ${active ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>
                   {f === 0 ? t("Gratis") : `${formatIDR(f)} · ${f === 2500 ? "BI-FAST" : t("Online")}`}
                 </button>
               );
             })}
             <button type="button" aria-pressed={customFee} onClick={() => setCustomFee(true)}
-              className={`chip h-10 border ${customFee ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>{t("Lainnya")}</button>
+              className={`chip h-10 border ${customFee ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>{t("Lainnya")}</button>
           </div>
           {customFee && <AmountInput id="tx-fee" aria-label={t("Biaya transfer")} value={fee} onChange={setFee} className="mt-3" />}
           {feeValue > 0 && <p className="mt-2 text-[14px] text-ink-soft">{t("Saldo {name} berkurang {amount}", { name: from?.name || "", amount: formatIDR(value + feeValue) })}</p>}
@@ -191,7 +191,7 @@ function TxForm({ init }) {
               const active = activeRootId === c.id;
               return (
                 <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active && categoryId === c.id ? "" : c.id)}
-                  className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 transition ${active ? "border-ink bg-white" : "border-transparent hover:bg-canvas"}`}>
+                  className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 transition ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
                   <CategoryIcon category={c} size={32} />
                   <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
                 </button>
@@ -204,7 +204,7 @@ function TxForm({ init }) {
                 const active = categoryId === c.id;
                 return (
                   <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? c.parent_id : c.id)}
-                    className={`chip h-10 border ${active ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>
+                    className={`chip h-10 border ${active ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>
                     {active && <Check className="h-3.5 w-3.5" />} {c.name}
                   </button>
                 );
@@ -219,10 +219,10 @@ function TxForm({ init }) {
         <div className="flex flex-wrap gap-2">
           {[[0, t("Hari ini")], [1, t("Kemarin")]].map(([o, l]) => (
             <button key={o} type="button" aria-pressed={!customDate && dayOffset === o} onClick={() => setDay(o)}
-              className={`chip h-10 border ${!customDate && dayOffset === o ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>{l}</button>
+              className={`chip h-10 border ${!customDate && dayOffset === o ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>{l}</button>
           ))}
           <button type="button" aria-pressed={customDate} onClick={() => setCustomDate(true)}
-            className={`chip h-10 border ${customDate ? "border-ink bg-ink text-white" : "border-control bg-white text-ink"}`}>{t("Tanggal lain")}</button>
+            className={`chip h-10 border ${customDate ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>{t("Tanggal lain")}</button>
         </div>
         {customDate && (
           <input type="datetime-local" aria-label={t("Tanggal")} className="field mt-3" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />

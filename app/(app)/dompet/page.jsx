@@ -26,14 +26,22 @@ export default function WalletPage() {
           <button className="btn-primary h-10 px-4 text-[14px]" onClick={() => openAccount({})}><Plus className="h-4 w-4" /> {t("Akun")}</button>
         </>} />
 
-      <div className="grid gap-6 lg:grid-cols-[440px_minmax(0,1fr)] lg:items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[440px_minmax(0,1fr)] lg:items-start">
         <div>
-          <section className="card p-5 lg:p-6">
-            <p className="text-[16px] text-ink-soft">{t("Kekayaan bersih, semua akun yang kamu lihat")}</p>
-            <Money value={sum(accounts)} className="mt-1 block text-[34px] font-semibold leading-tight" />
-            <p className="mt-2 text-[16px] text-ink-soft">
-              <Money value={sum(mine)} compact className="font-medium text-ink" dots={5} /> {t("milik kamu")} · <Money value={sum(shared)} compact className="font-medium text-ink" dots={5} /> {t("dibagikan")}
-            </p>
+          <section className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#1C1C1E] via-[#2C2C54] to-[#5856D6] p-5 text-white shadow-float">
+            <div className="pointer-events-none absolute -right-14 -top-16 h-52 w-52 rounded-full bg-[#AF52DE]/40 blur-2xl" />
+            <p className="relative text-[15px] font-medium text-white/75">{t("Kekayaan bersih, semua akun yang kamu lihat")}</p>
+            <Money value={sum(accounts)} className="relative mt-1 block text-[34px] font-bold leading-tight tracking-tight" />
+            <div className="relative mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-[16px] bg-white/10 p-3">
+                <p className="text-[13px] text-white/70">{t("milik kamu")}</p>
+                <Money value={sum(mine)} compact className="text-[18px] font-bold" dots={5} />
+              </div>
+              <div className="rounded-[16px] bg-white/10 p-3">
+                <p className="text-[13px] text-white/70">{t("dibagikan")}</p>
+                <Money value={sum(shared)} compact className="text-[18px] font-bold" dots={5} />
+              </div>
+            </div>
           </section>
 
           {accounts.length === 0 ? (
@@ -46,7 +54,7 @@ export default function WalletPage() {
                   const active = g.key === current?.key;
                   return (
                     <button key={g.key} role="tab" aria-selected={active} onClick={() => setTab(g.key)}
-                      className={`-mb-px flex-none border-b-2 pb-2.5 text-[16px] ${active ? "border-ink font-medium text-ink" : "border-transparent text-ink-soft"}`}>
+                      className={`-mb-px flex-none border-b-2 pb-2.5 text-[16px] ${active ? "border-brand-600 font-semibold text-brand-600" : "border-transparent text-ink-soft"}`}>
                       {t(g.label)} <span className="tabular text-ink-mute">{g.items.length}</span>
                     </button>
                   );

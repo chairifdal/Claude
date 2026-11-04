@@ -9,8 +9,8 @@ import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui";
 import PeriodBar, { FilterChip } from "@/components/PeriodBar";
 
-const ACCENT = "#1d5fd6";
-const NEUTRAL = "#b9c2cc";
+const ACCENT = "#007AFF";
+const NEUTRAL = "#B3D7FF";
 
 function loadState() {
   try { const s = JSON.parse(sessionStorage.getItem("kk-analysis") || "null"); if (s) return { ...s, anchor: new Date(s.anchor) }; } catch {}
@@ -83,7 +83,7 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Kiri: ringkasan + tren (desktop selalu tampil; HP lewat tab) */}
         <section className="card flex flex-col p-6">
           <p className="text-[16px] text-ink-soft">{kind === "expense" ? t("Total pengeluaran") : t("Total pemasukan")}</p>
@@ -107,7 +107,7 @@ export default function AnalysisPage() {
           <div role="tablist" className="mt-6 flex gap-6 border-b border-line lg:hidden">
             {[["list", t("Daftar")], ["trend", t("Tren")]].map(([v, l]) => (
               <button key={v} role="tab" aria-selected={view === v} onClick={() => set({ view: v })}
-                className={`-mb-px border-b-2 pb-2.5 text-[16px] ${view === v ? "border-ink font-medium text-ink" : "border-transparent text-ink-soft"}`}>{l}</button>
+                className={`-mb-px border-b-2 pb-2.5 text-[16px] ${view === v ? "border-brand-600 font-semibold text-brand-600" : "border-transparent text-ink-soft"}`}>{l}</button>
             ))}
           </div>
           <h2 className="section-title mt-6 hidden lg:block">{t("Tren")}</h2>
@@ -177,7 +177,7 @@ function GroupList({ data, maxGroup, qs, t }) {
                 </span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-rule">
-                <div className="h-full rounded-full" style={{ width: `${(g.total / maxGroup) * 100}%`, background: i === 0 ? ACCENT : NEUTRAL }} />
+                <div className="h-full rounded-full" style={{ width: `${(g.total / maxGroup) * 100}%`, background: g.cat?.color || ACCENT }} />
               </div>
             </div>
             <ChevronRight className="h-4 w-4 flex-none text-ink-mute" />

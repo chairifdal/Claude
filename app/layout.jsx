@@ -18,18 +18,18 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#f3f5f7",
+  themeColor: "#F2F2F7",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
       <head>
-        {/* Typeface dari sheet taste-skill: Manrope 400/500/600 */}
+        {/* iPhone memakai SF Pro (font sistem); Android/desktop memakai Inter */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans"><Providers>{children}</Providers></body>
     </html>

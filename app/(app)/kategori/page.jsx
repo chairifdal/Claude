@@ -124,7 +124,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
                 <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
                   {icons.map(([k, Icon]) => (
                     <button key={k} type="button" onClick={() => setIcon(k)} aria-label={k} aria-pressed={icon === k}
-                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-ink bg-ink text-white" : "border-line bg-white text-ink-soft hover:text-ink"}`}>
+                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white text-ink-soft hover:text-ink"}`}>
                       <Icon className="h-5 w-5" strokeWidth={1.6} />
                     </button>
                   ))}

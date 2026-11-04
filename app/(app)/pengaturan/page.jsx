@@ -50,7 +50,7 @@ export default function SettingsPage() {
             ) : (
               <button onClick={() => setName(profile?.full_name || "")} className="text-left">
                 <p className="text-[20px] font-medium">{profile?.full_name}</p>
-                <p className="text-[14px] font-medium text-brand-700">{t("Ubah nama")}</p>
+                <p className="text-[14px] font-medium text-brand-600">{t("Ubah nama")}</p>
               </button>
             )}
             <p className="mt-0.5 truncate text-[14px] text-ink-soft">{profile?.email}</p>
@@ -83,7 +83,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-5">
-          <p className="flex items-center gap-2 text-[16px] font-medium"><Languages className="h-5 w-5 text-ink-soft" /> {t("Bahasa")}</p>
+          <p className="flex items-center gap-3 text-[17px]"><span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#30B0C7] text-white"><Languages className="h-[18px] w-[18px]" /></span> {t("Bahasa")}</p>
           <Segmented value={locale} onChange={changeLocale} className="mt-3" options={[
             { value: "id", label: "Bahasa Indonesia" },
             { value: "en", label: "English" },
@@ -96,10 +96,10 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-1">
-          <Row href="/kategori" icon={Shapes} label={t("Kategori & sub-kategori")} />
-          <Row href="/tagihan" icon={CalendarClock} label={t("Tagihan rutin")} />
-          <Row href="/berulang" icon={Repeat} label={t("Transaksi berulang")} />
-          <Row href="/aktivitas" icon={ReceiptText} label={t("Semua transaksi & ekspor CSV")} />
+          <Row href="/kategori" icon={Shapes} label={t("Kategori & sub-kategori")} color="#FF9500" />
+          <Row href="/tagihan" icon={CalendarClock} label={t("Tagihan rutin")} color="#FF3B30" />
+          <Row href="/berulang" icon={Repeat} label={t("Transaksi berulang")} color="#34C759" />
+          <Row href="/aktivitas" icon={ReceiptText} label={t("Semua transaksi & ekspor CSV")} color="#5856D6" />
         </section>
 
         <section className="card flex gap-3 p-5 text-[14px] text-ink-soft">
@@ -113,11 +113,11 @@ export default function SettingsPage() {
   );
 }
 
-function Row({ href, icon: Icon, label }) {
+function Row({ href, icon: Icon, label, color = "#007AFF" }) {
   return (
-    <Link href={href} className="flex min-h-[56px] items-center gap-3 rounded-control px-4 py-3 hover:bg-canvas">
-      <Icon className="h-5 w-5 text-ink-soft" />
-      <span className="flex-1 text-[16px]">{label}</span>
+    <Link href={href} className="flex min-h-[52px] items-center gap-3 rounded-[14px] px-4 py-2.5 active:bg-fill">
+      <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] text-white" style={{ background: color }}><Icon className="h-[18px] w-[18px]" strokeWidth={2.2} /></span>
+      <span className="flex-1 text-[17px]">{label}</span>
       <ChevronRight className="h-5 w-5 text-ink-mute" />
     </Link>
   );

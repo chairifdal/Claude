@@ -46,7 +46,7 @@ export default function AccountPicker({ id, label, accounts, value, onChange, pl
                   return (
                     <button key={a.id} type="button" role="option" aria-selected={active}
                       onClick={() => { onChange(a.id); setOpen(false); }}
-                      className={`flex min-h-[56px] w-full items-center gap-3 rounded-[8px] px-3 py-2 text-left ${active ? "bg-[#eef1f4]" : "hover:bg-canvas"}`}>
+                      className={`flex min-h-[56px] w-full items-center gap-3 rounded-[8px] px-3 py-2 text-left ${active ? "bg-fill" : "hover:bg-canvas"}`}>
                       <AccountGlyph account={a} size={32} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px]">{a.name}</span>
