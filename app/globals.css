@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html, body { background: #F3F5FA; color: #0E1430; }
+body { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+* { -webkit-font-smoothing: antialiased; }
+input, select, textarea, button { font: inherit; }
+.tabular { font-variant-numeric: tabular-nums; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
+.pt-safe { padding-top: env(safe-area-inset-top); }
+
+@layer components {
+  .card { @apply rounded-3xl bg-white shadow-card; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition; }
+  .field { @apply w-full rounded-2xl border border-line bg-white px-4 py-3.5 text-[15px] text-ink outline-none transition placeholder:text-ink-mute focus:border-brand-500 focus:ring-4 focus:ring-brand-100; }
+  .label { @apply mb-1.5 block text-[12px] font-semibold uppercase tracking-wider text-ink-mute; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-[15px] font-bold transition active:scale-[.98] disabled:opacity-50 disabled:active:scale-100; }
+  .btn-primary { @apply btn bg-brand-600 text-white shadow-lift hover:bg-brand-700; }
+  .btn-ghost { @apply btn bg-canvas text-ink hover:bg-line; }
+  .btn-danger { @apply btn bg-expense-soft text-expense; }
+  .icon-btn { @apply grid h-10 w-10 place-items-center rounded-full text-ink-soft transition hover:bg-white active:scale-95; }
+  .section-title { @apply text-[17px] font-extrabold tracking-tight text-ink; }
+}
