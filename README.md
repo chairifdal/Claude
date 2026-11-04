@@ -17,8 +17,16 @@ Stack: **GitHub → Vercel (Next.js 14) + Supabase (Postgres, Auth, Realtime, RL
 - **Transaksi berulang otomatis** (gaji, uang belanja ke pasangan, iuran) dengan tanggal 1–31, tanggal mulai dan selesai, serta bisa dijeda. Dijalankan setiap hari pukul 00.05 WIB oleh `pg_cron`, dan juga saat aplikasi dibuka. Bulan yang terlewat ikut dicatat, dan tidak akan tercatat dua kali.
 - **Tagihan rutin** (listrik, internet, SPP, cicilan) lengkap dengan tanggal jatuh tempo, tombol Bayar, dan status Lunas/Telat. Beranda menampilkan saldo setelah tagihan.
 - **Kategori + sub-kategori** dengan ±100 ikon rumah tangga yang dikelompokkan dan bisa dicari.
-- **Analisis**: per minggu/bulan/tahun; tampilan daftar atau tren; filter per orang; dikelompokkan per kategori atau sub-kategori. Ketuk kategori untuk melihat detailnya: tren 6 periode, rata-rata, anggaran, rincian, dan catatannya.
-- **Anggaran** bulanan per kategori, termasuk "aman dipakai per hari".
+- **Analisis**:
+  - Filter utama per orang (Semua / Saya / pasangan); periode Minggu / Bulan atau Periode gajian / Tahun / Rentang tanggal.
+  - Pie chart per kategori atau sub-kategori; arus kas dengan rasio menabung; tren dengan garis rata-rata; pengeluaran terbesar.
+  - Ketuk kategori untuk melihat detailnya: tren 6 periode, rata-rata, anggaran, rincian, dan catatannya.
+- **Periode keuangan per orang** (Pengaturan → Periode mengikuti gajian):
+  - **Dari transaksi Gaji:** periode dimulai di tanggal gaji tercatat. Gaji kedua yang masuk < 20 hari setelah awal periode diabaikan; gajian berikutnya diperkirakan dari pola sebelumnya, dan ada pengingat kalau gaji telat dicatat.
+  - **Tanggal tetap:** misalnya setiap tanggal 25.
+  - Kalau dimatikan, periode memakai bulan kalender. Beranda, Analisis, dan Anggaran mengikuti periode ini; tagihan tetap memakai tanggal kalender.
+- **Anggaran** per periode per kategori, termasuk "aman dipakai per hari".
+- **Sesuaikan saldo**: ketik saldo sesuai m-banking, lalu selisihnya dicatat sebagai penyesuaian (tidak masuk grafik maupun anggaran).
 - **Ekspor CSV** dari halaman Aktivitas.
 - **Bahasa Indonesia / English** (Pengaturan → Bahasa). Cek kelengkapan terjemahan: `node scripts/check-i18n.js`.
 - Sembunyikan saldo, dan bisa dipasang di layar utama (PWA).
@@ -46,7 +54,7 @@ Warna dasar berupa CSS variable di `app/globals.css` (`:root` untuk terang, `.da
 ### 1. Supabase
 1. https://supabase.com → **New project** (region Singapore).
 2. **SQL Editor → New query** → paste seluruh isi `supabase/schema.sql` → **Run**. File ini aman dijalankan ulang.
-   Database yang sudah memakai versi awal cukup menjalankan `supabase/migrations/002_household.sql` lalu `003_fee_recurring.sql` (berurutan).
+   Database yang sudah memakai versi awal cukup menjalankan `supabase/migrations/002_household.sql` lalu `003_fee_recurring.sql` dan `004_periods_adjustments.sql` (berurutan).
 3. **Authentication → URL Configuration**: isi *Site URL* dengan URL Vercel kamu (mis. `https://kantong-kita.vercel.app`) dan tambahkan `https://kantong-kita.vercel.app/auth/callback` ke *Redirect URLs*.
 4. (Opsional) Kalau tidak ingin konfirmasi email: **Authentication → Providers → Email → matikan "Confirm email"**.
 5. **Project Settings → API**: salin *Project URL* dan *anon / publishable key*.

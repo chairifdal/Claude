@@ -5,7 +5,8 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Toolti
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
 import { periodRange, periodLabel, formatIDR, firstName } from "@/lib/format";
-import { lastPeriods, niceMax } from "@/lib/analytics";
+import { lastPeriods, niceMax, toISODate } from "@/lib/analytics";
+import { rangeLabel } from "@/lib/period";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui";
 import PeriodBar from "@/components/PeriodBar";
 import { TxRow } from "@/components/TxList";
@@ -15,24 +16,29 @@ const NEUTRAL = "#B3D7FF";
 
 function initial() {
   const q = new URLSearchParams(window.location.search);
-  const p = ["week", "month", "year"].includes(q.get("p")) ? q.get("p") : "month";
+  const p = ["week", "month", "year", "range"].includes(q.get("p")) ? q.get("p") : "month";
   const d = q.get("d") ? new Date(`${q.get("d")}T12:00:00`) : new Date();
-  return { period: p, anchor: isNaN(d) ? new Date() : d, who: q.get("w") || "all" };
+  const range = { from: q.get("f") || toISODate(new Date(Date.now() - 29 * 86400000)), to: q.get("t") || toISODate(new Date()) };
+  return { period: p, anchor: isNaN(d) ? new Date() : d, who: q.get("w") || "all", range };
 }
 
 export default function CategoryDetail() {
   const C = chartColors(useTheme().isDark);
   const { id } = useParams();
-  const { categoryById, categories, budgets, people, user, hidden, t, countsInStats, statRows } = useApp();
-  const [{ period, anchor, who }, setSt] = useState(initial);
+  const { categoryById, categories, budgets, people, user, hidden, t, countsInStats, statRows, cycle } = useApp();
+  const [{ period, anchor, who, range }, setSt] = useState(initial);
   const [showAll, setShowAll] = useState(false);
   const cat = categoryById[id];
   const root = rootCategory(cat, categoryById);
   const isRoot = cat && !cat.parent_id;
 
   const N = 6;
-  const periods = lastPeriods(period, anchor, N);
-  const { start, end } = periodRange(period, anchor);
+  const ctx = { cycle: who === user?.id || who === "all" ? cycle : null, range };
+  const { start, end } = periodRange(period, anchor, ctx);
+  // Rentang bebas: 6 rentang berurutan dengan panjang yang sama
+  const periods = period === "range"
+    ? Array.from({ length: N }, (_, i) => { const len = end - start; const e = new Date(end.getTime() - (N - 1 - i) * len); return { anchor: e, start: new Date(e.getTime() - len), end: e, total: 0 }; })
+    : lastPeriods(period, anchor, N, ctx);
   const { rows } = useTransactions({ from: periods[0].start, to: end, limit: 10000 });
 
   const ids = useMemo(() => new Set(isRoot ? [id, ...categories.filter((c) => c.parent_id === id).map((c) => c.id)] : [id]), [id, isRoot, categories]);
@@ -40,7 +46,7 @@ export default function CategoryDetail() {
   const d = useMemo(() => {
     const all = statRows(rows);
     const inCat = all.filter((r) => countsInStats(r) && ids.has(r.category_id) && (who === "all" || r.created_by === who));
-    const series = periods.map((p) => ({ ...p, label: periodLabel(period, p.anchor), total: 0 }));
+    const series = periods.map((p) => ({ ...p, label: period === "range" ? rangeLabel(p.start, p.end) : periodLabel(period, p.anchor, ctx), total: 0 }));
     for (const r of inCat) {
       const dt = new Date(r.occurred_at);
       const s = series.find((p) => dt >= p.start && dt < p.end);
@@ -74,7 +80,7 @@ export default function CategoryDetail() {
   const budgetSpent = budget && root?.id === id ? d.total : null;
   const yMax = niceMax(Math.max(...d.series.map((s) => s.total), d.avg, 0));
   const maxSub = d.subs[0]?.total || 1;
-  const prevWord = t(period === "week" ? "minggu" : period === "year" ? "tahun" : "bulan");
+  const prevWord = period === "range" ? t("rentang") : t(period === "week" ? "minggu" : period === "year" ? "tahun" : ctx.cycle && !ctx.cycle.isCalendar ? "periode" : "bulan");
 
   return (
     <div>
@@ -82,7 +88,8 @@ export default function CategoryDetail() {
         right={<CategoryIcon category={cat} size={40} />} />
 
       <div className="space-y-3">
-        <PeriodBar period={period} anchor={anchor} onChange={(p, a) => setSt((s) => ({ ...s, period: p, anchor: a }))} />
+        <PeriodBar period={period} anchor={anchor} ctx={ctx} allowRange range={range} onRange={(r) => setSt((s) => ({ ...s, range: r }))}
+          onChange={(p, a) => setSt((s) => ({ ...s, period: p, anchor: a }))} />
         {who !== "all" && (
           <button className="chip h-10 border border-brand-600 bg-brand-600 text-white" onClick={() => setSt((s) => ({ ...s, who: "all" }))}>
             {who === user?.id ? t("Saya") : firstName(people[who])} · {t("tampilkan semua")}
@@ -92,7 +99,7 @@ export default function CategoryDetail() {
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section className="card flex flex-col p-6">
-            <p className="text-[16px] text-ink-soft">{periodLabel(period, anchor)}</p>
+            <p className="text-[16px] text-ink-soft">{periodLabel(period, anchor, ctx)}</p>
             <Money value={d.total} className="block text-[32px] font-semibold leading-tight" />
             <p className="mt-1 text-[16px] text-ink-soft">
               {d.allTotal ? t("{pct}% dari semua {kind}", { pct: Math.round((d.total / d.allTotal) * 100), kind: cat.kind === "expense" ? t("pengeluaran") : t("pemasukan") }) : ""}
@@ -127,7 +134,7 @@ export default function CategoryDetail() {
                   </div>
                   {budgetSpent > budget.amount && <div className="h-full rounded-full bg-expense" style={{ flexGrow: 1 - budget.amount / budgetSpent }} />}
                 </div>
-                {period === "month" && budgetSpent <= budget.amount && periodRange(period, anchor).end > new Date() && (
+                {period === "month" && budgetSpent <= budget.amount && periodRange(period, anchor, ctx).end > new Date() && (
                   <p className="mt-1.5 text-[14px] text-ink-soft">
                     {t("Sisa")} <Money value={budget.amount - budgetSpent} dots={4} className="text-ink" /> · {t("aman {amount}/hari", { amount: hidden ? "Rp •••" : formatIDR(Math.floor((budget.amount - budgetSpent) / Math.max(1, Math.round((end - new Date()) / 86400000)))) })}
                   </p>

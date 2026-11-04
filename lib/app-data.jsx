@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabase } from "./supabase";
 import { useI18n } from "./i18n";
+import { makeCycle } from "./period";
 
 const Ctx = createContext(null);
 const PERSON_HUES = [212, 338, 150, 32];
@@ -32,6 +33,7 @@ export function AppDataProvider({ children }) {
   const [invites, setInvites] = useState([]);
   const [budgets, setBudgets] = useState([]);
   const [bills, setBills] = useState([]);
+  const [salaryDates, setSalaryDates] = useState([]);
   const { locale, setLocale, t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
@@ -80,6 +82,17 @@ export function AppDataProvider({ children }) {
     let saved = null;
     try { saved = localStorage.getItem("kk-locale"); } catch {}
     if (mine?.locale && !saved) setLocale(mine.locale);
+    // Periode gajian: tanggal-tanggal pemasukan di kategori gaji milik saya (beserta sub-kategorinya)
+    if (mine?.period_mode === "salary") {
+      const cats_ = cats.data || [];
+      const root = salaryRootFor(mine, cats_);
+      const ids = root ? [root.id, ...cats_.filter((c) => c.parent_id === root.id).map((c) => c.id)] : [];
+      if (ids.length) {
+        const { data: sal } = await supabase.from("transactions").select("occurred_at")
+          .eq("type", "income").in("category_id", ids).order("occurred_at", { ascending: false }).limit(120);
+        setSalaryDates((sal || []).map((r) => new Date(r.occurred_at)));
+      } else setSalaryDates([]);
+    } else setSalaryDates([]);
     setLoading(false);
     // Cadangan untuk jadwal harian di server: catat transaksi berulang yang sudah jatuh tempo
     if (!ranRecurring.current) {
@@ -135,10 +148,18 @@ export function AppDataProvider({ children }) {
     const personHue = (id) => PERSON_HUES[Math.max(0, order.indexOf(id)) % PERSON_HUES.length];
     // Poin 5: akun dengan include_in_totals = false tidak ikut statistik pemasukan/pengeluaran,
     // tetapi saldonya tetap masuk total aset.
-    const countsInStats = (tx) => tx.type !== "transfer" && byId[tx.account_id]?.include_in_totals !== false;
+    // Penyesuaian saldo juga tidak dihitung sebagai pemasukan/pengeluaran.
+    const countsInStats = (tx) => tx.type !== "transfer" && !tx.is_adjustment && byId[tx.account_id]?.include_in_totals !== false;
+    // Siklus periode keuangan milik saya (kalender / tanggal tetap / gajian)
+    const cycle = makeCycle({ mode: profile?.period_mode || "calendar", day: profile?.period_day || 25, salaryDates });
+    const savePeriod = async (patch) => {
+      await supabase.from("profiles").update(patch).eq("id", user.id);
+      load(); setVersion((v) => v + 1);
+    };
     const canRecord = (a) => a && (a.my_role === "owner" || a.my_role === "editor");
     return {
-      statRows, personHue, countsInStats, canRecord, bills, t, locale, setLocale,
+      statRows, personHue, countsInStats, canRecord, bills, t, locale, setLocale, cycle, savePeriod,
+      salaryRoot: salaryRootFor(profile, categories),
       lastAccountId: () => { try { return localStorage.getItem("kk-last-account"); } catch { return null; } },
       rememberAccount: (id) => { try { localStorage.setItem("kk-last-account", id); } catch {} },
       supabase, user, profile, people, accounts: active, allAccounts: accounts, accountById: byId,
@@ -147,7 +168,7 @@ export function AppDataProvider({ children }) {
       txSheet, openTx: (o = {}) => setTxSheet(o), closeTx: () => setTxSheet(null),
       accountSheet, openAccount: (o = {}) => setAccountSheet(o), closeAccount: () => setAccountSheet(null),
     };
-  }, [supabase, user, profile, people, accounts, categories, invites, budgets, bills, t, locale, setLocale, loading, version,
+  }, [supabase, user, profile, people, accounts, categories, invites, budgets, bills, salaryDates, load, t, locale, setLocale, loading, version,
       hidden, toggleHidden, refresh, notify, toast, txSheet, accountSheet]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -174,13 +195,22 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      let q = supabase.from("transactions").select("*").order("occurred_at", { ascending: false }).limit(limit);
-      if (accountId) q = q.or(`account_id.eq.${accountId},to_account_id.eq.${accountId}`);
-      if (fromKey) q = q.gte("occurred_at", fromKey);
-      if (toKey) q = q.lt("occurred_at", toKey);
-      const { data } = await q;
+      // Supabase membatasi 1.000 baris per permintaan, jadi ambil per halaman sampai `limit`
+      const PAGE = 1000;
+      const all = [];
+      for (let offset = 0; offset < limit; offset += PAGE) {
+        let q = supabase.from("transactions").select("*").order("occurred_at", { ascending: false }).order("id")
+          .range(offset, Math.min(offset + PAGE, limit) - 1);
+        if (accountId) q = q.or(`account_id.eq.${accountId},to_account_id.eq.${accountId}`);
+        if (fromKey) q = q.gte("occurred_at", fromKey);
+        if (toKey) q = q.lt("occurred_at", toKey);
+        const { data, error } = await q;
+        if (error || !data) break;
+        all.push(...data);
+        if (data.length < Math.min(PAGE, limit - offset)) break;
+      }
       if (!cancelled) {
-        setRows((data || []).map((t) => ({ ...t, amount: Number(t.amount), fee: Number(t.fee) || 0 })));
+        setRows(all.map((t) => ({ ...t, amount: Number(t.amount), fee: Number(t.fee) || 0 })));
         setLoading(false);
       }
     })();
@@ -188,6 +218,13 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
   }, [supabase, user, accountId, fromKey, toKey, limit, version]);
 
   return { rows, loading };
+}
+
+/** Kategori gaji yang memicu periode: pilihan di profil, atau kategori pemasukan utama bernama "Gaji". */
+export function salaryRootFor(profile, categories) {
+  if (!profile) return null;
+  const mine = categories.filter((c) => c.owner_id === profile.id && c.kind === "income" && !c.parent_id);
+  return mine.find((c) => c.id === profile.salary_category_id) || mine.find((c) => /gaji|salary/i.test(c.name)) || null;
 }
 
 /** Kategori induk (root) dari sebuah kategori */

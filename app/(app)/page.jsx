@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
-import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Shapes, Plus, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Plus, Sparkles } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
-import { monthRange, firstName, formatIDR, monthLabel } from "@/lib/format";
+import { monthRange, firstName, formatIDR } from "@/lib/format";
+import { daysBetween } from "@/lib/period";
 import { billStatus } from "@/lib/bills";
 import { AccountGlyph, Avatar, Money, Empty, CategoryIcon } from "@/components/ui";
 import { TxGroupedList } from "@/components/TxList";
@@ -13,9 +14,17 @@ import GoalsCard from "@/components/GoalsCard";
 
 export default function HomePage() {
   const { profile, people, accounts, hidden, toggleHidden, openAccount, openTx, categoryById, invites, user, loading, budgets, bills, accountById,
-    supabase, notify, refresh, t, countsInStats, statRows } = useApp();
-  const { start, end } = useMemo(() => monthRange(), []);
-  const { rows: monthRows } = useTransactions({ from: start, to: end, limit: 3000 });
+    supabase, notify, refresh, t, countsInStats, statRows, cycle, salaryRoot } = useApp();
+  // Tagihan memakai bulan kalender; ringkasan memakai periode keuangan (kalender / gajian / tanggal tetap)
+  const cal = useMemo(() => monthRange(), []);
+  const per = cycle.rangeOf(new Date());
+  const qFrom = per.start < cal.start ? per.start : cal.start;
+  const qTo = per.end > cal.end ? per.end : cal.end;
+  const { rows: windowRows } = useTransactions({ from: qFrom, to: qTo, limit: 5000 });
+  const inRange = (r, a, b) => { const d = new Date(r.occurred_at); return d >= a && d < b; };
+  const monthRows = useMemo(() => windowRows.filter((r) => inRange(r, cal.start, cal.end)), [windowRows, cal]);
+  const perKey = `${per.start.getTime()}-${per.end.getTime()}`;
+  const periodRows = useMemo(() => windowRows.filter((r) => inRange(r, per.start, per.end)), [windowRows, perKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const { rows: recent } = useTransactions({ limit: 5 });
 
   const partner = Object.values(people).find((p) => p.id !== user?.id);
@@ -28,7 +37,7 @@ export default function HomePage() {
     let income = 0, expense = 0, mine = 0, shared = 0, partnerSpent = 0;
     const byPersonShared = {};
     const byRoot = {};
-    for (const tx of statRows(monthRows)) {
+    for (const tx of statRows(periodRows)) {
       if (!countsInStats(tx)) continue;
       if (tx.type === "income") income += tx.amount;
       if (tx.type !== "expense") continue;
@@ -45,15 +54,15 @@ export default function HomePage() {
       byRoot[key].total += tx.amount;
     }
     return { income, expense, mine, shared, partnerSpent, byPersonShared, roots: Object.values(byRoot).sort((a, b) => b.total - a.total) };
-  }, [monthRows, accountById, categoryById, user, countsInStats, statRows, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [periodRows, accountById, categoryById, user, countsInStats, statRows, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const daysLeft = new Date(end - 1).getDate() - new Date().getDate() + 1;
+  const daysLeft = Math.max(1, daysBetween(new Date(), per.end));
   const finding = useMemo(() => {
     const worst = budgets
       .map((b) => ({ b, cat: categoryById[b.category_id], spent: m.roots.find((r) => r.id === b.category_id)?.total || 0 }))
       .filter((x) => x.cat).map((x) => ({ ...x, ratio: x.spent / x.b.amount })).sort((a, b) => b.ratio - a.ratio)[0];
-    if (worst && worst.ratio >= 1) return { tone: "bad", text: t("{cat} lewat {amount} dari anggaran, {n} hari lagi bulan ini", { cat: worst.cat.name, amount: hidden ? "" : formatIDR(worst.spent - worst.b.amount), n: daysLeft }) };
-    if (worst && worst.ratio >= 0.8) return { tone: "warn", text: t("{cat} sudah {pct}% dari anggaran, {n} hari lagi bulan ini", { cat: worst.cat.name, pct: Math.round(worst.ratio * 100), n: daysLeft }) };
+    if (worst && worst.ratio >= 1) return { tone: "bad", text: t("{cat} lewat {amount} dari anggaran, {n} hari lagi", { cat: worst.cat.name, amount: hidden ? "" : formatIDR(worst.spent - worst.b.amount), n: daysLeft }) };
+    if (worst && worst.ratio >= 0.8) return { tone: "warn", text: t("{cat} sudah {pct}% dari anggaran, {n} hari lagi", { cat: worst.cat.name, pct: Math.round(worst.ratio * 100), n: daysLeft }) };
     if (m.roots[0]) return { tone: "ok", text: t("Terbesar bulan ini: {cat}, {pct}% dari pengeluaran", { cat: m.roots[0].cat.name, pct: Math.round((m.roots[0].total / m.expense) * 100) }) };
     return null;
   }, [budgets, categoryById, m, daysLeft, hidden, t]);
@@ -103,6 +112,18 @@ export default function HomePage() {
         </div>
       ))}
 
+      {per.late && (
+        <button onClick={() => openTx({ type: "income", categoryId: salaryRoot?.id })}
+          className="mb-4 flex w-full items-center gap-3 rounded-card bg-surface p-4 text-left shadow-card">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-[10px] bg-gradient-to-br from-[#34C759] to-[#00C7BE] text-[18px] text-white">Rp</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[16px] font-semibold">{t("Gaji sudah masuk?")}</span>
+            <span className="block text-[14px] text-ink-soft">{t("Periode baru dimulai saat gaji dicatat. Ketuk untuk mencatat.")}</span>
+          </span>
+          <ChevronRight className="h-5 w-5 flex-none text-ink-mute" />
+        </button>
+      )}
+
       <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-5">
           {/* Kartu saldo bergradien */}
@@ -114,13 +135,6 @@ export default function HomePage() {
             {unpaidBills > 0 && (
               <p className="relative text-[14px] text-white/80">{t("Setelah tagihan bulan ini")}: <Money value={totalLiquid - unpaidBills} className="font-semibold text-white" dots={5} /></p>
             )}
-
-            <div className="relative mt-5 grid grid-cols-4 gap-2">
-              <HeroAction icon={ArrowUpRight} label={t("Keluar")} onClick={() => openTx({ type: "expense" })} primary />
-              <HeroAction icon={ArrowDownLeft} label={t("Masuk")} onClick={() => openTx({ type: "income" })} />
-              <HeroAction icon={ArrowLeftRight} label={t("Transfer")} onClick={() => openTx({ type: "transfer" })} />
-              <HeroAction icon={Shapes} label={t("Kategori")} href="/kategori" />
-            </div>
 
             <div className="relative mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-[16px] bg-white/15 p-3 backdrop-blur">
@@ -152,7 +166,7 @@ export default function HomePage() {
           {/* Kita berdua */}
           <section className="card p-5">
             <div className="flex items-baseline justify-between">
-              <h2 className="section-title">{t("Kita bulan ini")}</h2>
+              <h2 className="section-title">{cycle.isCalendar ? t("Kita bulan ini") : t("Kita periode ini")}</h2>
               <span className="text-[14px] text-ink-soft">{t("pengeluaran")}</span>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -186,7 +200,7 @@ export default function HomePage() {
               <h2 className="section-title">{t("Ke mana uangnya")}</h2>
               <Link href="/analisis" className="link text-[15px]">{t("Analisis")}</Link>
             </div>
-            <p className="text-[14px] capitalize text-ink-soft">{monthLabel(new Date())}</p>
+            <p className="text-[14px] capitalize text-ink-soft">{cycle.label(new Date(), !cycle.isCalendar)}</p>
             {topRoots.length ? (
               <>
                 <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full">
@@ -259,19 +273,6 @@ export default function HomePage() {
       </div>
     </div>
   );
-}
-
-function HeroAction({ icon: Icon, label, onClick, href, primary }) {
-  const inner = (
-    <>
-      <span className={`grid h-12 w-12 place-items-center rounded-full transition ${primary ? "bg-white text-brand-600 shadow-lg" : "bg-white/20 text-white ring-1 ring-white/25 backdrop-blur"}`}>
-        <Icon className="h-[22px] w-[22px]" strokeWidth={2.4} />
-      </span>
-      <span className="text-[13px] font-semibold">{label}</span>
-    </>
-  );
-  const cls = "flex flex-col items-center gap-1.5 transition active:scale-90";
-  return href ? <Link href={href} className={cls}>{inner}</Link> : <button onClick={onClick} className={cls}>{inner}</button>;
 }
 
 function Lane({ label, value, color }) {

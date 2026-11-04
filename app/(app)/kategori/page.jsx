@@ -96,7 +96,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
         <label htmlFor="cat-name" className="label">{t("Nama")}</label>
         <div className="flex items-center gap-3">
           <span className="grid h-12 w-12 flex-none place-items-center rounded-control border border-line"><CategoryIcon category={{ icon }} size={28} /></span>
-          <input id="cat-name" autoFocus className="field" placeholder={t("mis. Gas LPG")} value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="cat-name" className="field" placeholder={t("mis. Gas LPG")} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
       </div>
 

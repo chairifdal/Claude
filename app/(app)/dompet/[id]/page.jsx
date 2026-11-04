@@ -2,25 +2,27 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2 } from "lucide-react";
+import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2, SlidersHorizontal, ChevronRight } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
 import { monthRange, firstName, monthLabel } from "@/lib/format";
 import { ROLE_LABEL, ROLE_HINT } from "@/lib/constants";
 import { Avatar, Money, PageHeader, Sheet } from "@/components/ui";
 import { BankCard } from "@/components/BankCard";
+import ReconcileSheet from "@/components/ReconcileSheet";
 import { TxGroupedList } from "@/components/TxList";
 import { goalProgress, GoalBar } from "@/components/GoalsCard";
 
 export default function AccountDetail() {
   const { id } = useParams();
   const router = useRouter();
-  const { allAccounts, loading, user, openTx, openAccount, t } = useApp();
+  const { allAccounts, loading, user, openTx, openAccount, t, cycle } = useApp();
   const account = allAccounts.find((a) => a.id === id);
   const { rows } = useTransactions({ accountId: id });
   const [shareOpen, setShareOpen] = useState(false);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const month = useMemo(() => {
-    const { start, end } = monthRange();
+    const { start, end } = cycle.rangeOf(new Date());
     let inn = 0, out = 0;
     for (const tx of rows) {
       const d = new Date(tx.occurred_at);
@@ -29,7 +31,7 @@ export default function AccountDetail() {
       if (incoming) inn += tx.amount; else out += tx.amount + (tx.fee || 0);
     }
     return { inn, out };
-  }, [rows, id]);
+  }, [rows, id, cycle]);
 
   useEffect(() => {
     if (!loading && !account) router.replace("/dompet");
@@ -49,14 +51,24 @@ export default function AccountDetail() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
         <div className="space-y-4">
           <BankCard account={account} />
+          {canWrite && (
+            <button onClick={() => setReconcileOpen(true)} className="card flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill">
+              <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#5856D6] text-white"><SlidersHorizontal className="h-[17px] w-[17px]" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[17px]">{t("Sesuaikan saldo")}</span>
+                <span className="block text-[13px] text-ink-soft">{t("Samakan dengan saldo di m-banking")}</span>
+              </span>
+              <ChevronRight className="h-5 w-5 text-ink-mute" />
+            </button>
+          )}
 
           <div className="card grid grid-cols-2 divide-x divide-line p-5">
             <div className="pr-4">
-              <p className="text-[14px] text-ink-soft">{t("Masuk bulan ini")}</p>
+              <p className="text-[14px] text-ink-soft">{cycle.isCalendar ? t("Masuk bulan ini") : t("Masuk periode ini")}</p>
               <Money value={month.inn} sign className="block text-[20px] font-medium text-income" dots={5} />
             </div>
             <div className="pl-4">
-              <p className="text-[14px] text-ink-soft">{t("Keluar bulan ini")}</p>
+              <p className="text-[14px] text-ink-soft">{cycle.isCalendar ? t("Keluar bulan ini") : t("Keluar periode ini")}</p>
               <Money value={month.out} className="block text-[20px] font-medium" dots={5} />
             </div>
           </div>
@@ -122,6 +134,8 @@ export default function AccountDetail() {
           <TxGroupedList rows={rows.slice(0, 8)} perspectiveId={id} emptyText={t("Belum ada transaksi di akun ini")} />
         </section>
       </div>
+
+      <ReconcileSheet account={account} open={reconcileOpen} onClose={() => setReconcileOpen(false)} />
 
       <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title={isOwner ? t("Bagikan akun") : t("Anggota akun")}>
         <SharePanel account={account} isOwner={isOwner} onLeft={() => { setShareOpen(false); router.replace("/dompet"); }} />

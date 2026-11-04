@@ -22,11 +22,19 @@ export function Sheet({ open, onClose, title, children, footer, full = false }) 
   const { t } = useApp();
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Kunci halaman di belakang dengan position:fixed. overflow:hidden saja tidak cukup di iOS Safari:
+    // saat keyboard muncul, halaman belakang ikut bergeser sehingga ketukan meleset ke elemen lain.
+    const y = window.scrollY;
+    const b = document.body.style;
+    const prev = { position: b.position, top: b.top, left: b.left, right: b.right, width: b.width, overflow: b.overflow };
+    Object.assign(b, { position: "fixed", top: `-${y}px`, left: "0", right: "0", width: "100%", overflow: "hidden" });
     const onKey = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", onKey);
-    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
+    return () => {
+      Object.assign(b, prev);
+      window.scrollTo(0, y);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open, onClose]);
 
   if (!open) return null;

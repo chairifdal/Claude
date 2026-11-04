@@ -159,5 +159,37 @@ do $$ begin
   raise exception 'should not reach';
 exception when insufficient_privilege then null; end $$;
 
+-- ===== 004: penyesuaian saldo & pengaman hapus akun =====
+select pg_temp.as_user('a');
+do $$ declare before numeric; begin
+  select balance into before from account_balances where id='aaaaaaaa-0000-0000-0000-000000000001';
+  insert into transactions(account_id,type,amount,is_adjustment,note) values ('aaaaaaaa-0000-0000-0000-000000000001','expense',45000,true,'Penyesuaian saldo');
+  assert (select balance from account_balances where id='aaaaaaaa-0000-0000-0000-000000000001') = before - 45000, 'adjustment changes balance';
+end $$;
+-- penyesuaian tidak boleh berupa transfer
+do $$ begin
+  insert into transactions(account_id,to_account_id,type,amount,is_adjustment) values
+   ('aaaaaaaa-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000002','transfer',1,true);
+  raise exception 'should not reach';
+exception when check_violation then null; end $$;
+-- BCA Andi menerima transfer dari Gopay Bunga → tidak boleh dihapus
+do $$ begin
+  delete from accounts where id='aaaaaaaa-0000-0000-0000-000000000001';
+  raise exception 'should not reach';
+exception when raise_exception then
+  if sqlerrm <> 'ACCOUNT_HAS_SHARED_TRANSFERS' then raise; end if;
+end $$;
+do $$ begin assert (select count(*) from accounts where id='aaaaaaaa-0000-0000-0000-000000000001')=1, 'BCA still exists'; end $$;
+-- akun tanpa transfer lintas pemilik boleh dihapus
+insert into accounts(id,name,kind) values ('aaaaaaaa-0000-0000-0000-000000000009','Coba','cash');
+delete from accounts where id='aaaaaaaa-0000-0000-0000-000000000009';
+do $$ begin assert (select count(*) from accounts where id='aaaaaaaa-0000-0000-0000-000000000009')=0, 'plain delete ok'; end $$;
+-- pengaturan periode
+update profiles set period_mode='salary', period_day=25 where id=auth.uid();
+do $$ begin
+  update profiles set period_mode='weekly' where id=auth.uid();
+  raise exception 'should not reach';
+exception when check_violation then null; end $$;
+
 reset role;
 \echo ALL RLS TESTS PASSED

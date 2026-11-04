@@ -49,7 +49,7 @@ export default function ActivityPage() {
       const parent = cat?.parent_id ? categoryById[cat.parent_id] : null;
       return [
         new Date(tx.occurred_at).toISOString().slice(0, 16).replace("T", " "),
-        t(tx.type === "income" ? "Pemasukan" : tx.type === "expense" ? "Pengeluaran" : "Transfer"),
+        tx.is_adjustment ? t("Penyesuaian saldo") : t(tx.type === "income" ? "Pemasukan" : tx.type === "expense" ? "Pengeluaran" : "Transfer"),
         parent ? parent.name : cat?.name || "",
         parent ? cat.name : "",
         accountById[tx.account_id]?.name || tx.account_name || "",
