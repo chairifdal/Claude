@@ -80,7 +80,7 @@ export default function ActivityPage() {
             <input className="field pl-11" aria-label={t("Cari")} placeholder={t("Cari catatan, kategori, akun…")} value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
           <select aria-label={t("Akun")} value={accountId} onChange={(e) => setAccountId(e.target.value)}
-            className="h-12 w-full rounded-control border border-control bg-white px-4 text-[16px]">
+            className="h-12 w-full rounded-control border-0 bg-fill px-4 text-[17px]">
             <option value="">{t("Semua akun")}</option>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>

@@ -36,7 +36,10 @@ Gaya **iOS** yang colorful:
 - **Kartu:** kartu saldo dan kartu bank bergradien ala Apple Wallet.
 - **Navigasi & kontrol:** tab bar dan navigation bar tembus pandang (blur), context menu untuk tombol +, sheet dengan "Batal", segmented control, dan switch hijau.
 
-Token warna ada di `tailwind.config.js`, kelas dasar di `app/globals.css`, dan komponen dasar di `components/ui.jsx`.
+- **Dark Mode**: otomatis mengikuti HP, atau dipilih manual di Pengaturan → Tampilan (Otomatis / Terang / Gelap), dengan palet gelap iOS.
+- **Dompet**: grid kartu bergradien per kelompok (tanpa animasi geser), plus bar alokasi kekayaan; kartu kredit menampilkan pemakaian limit, pocket menampilkan progres target.
+
+Warna dasar berupa CSS variable di `app/globals.css` (`:root` untuk terang, `.dark` untuk gelap). Token warna ada di `tailwind.config.js`, kelas dasar di `app/globals.css`, dan komponen dasar di `components/ui.jsx`.
 
 ## Deploy (±15 menit)
 

@@ -143,7 +143,7 @@ function RoleOption({ value, current, onPick, t }) {
   const active = value === current;
   return (
     <button type="button" role="radio" aria-checked={active} onClick={() => onPick(value)}
-      className={`w-full rounded-control border p-3 text-left ${active ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600" : "border-line bg-white"}`}>
+      className={`w-full rounded-control border p-3 text-left ${active ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600" : "border-line bg-surface"}`}>
       <span className="block text-[16px] font-medium">{t(ROLE_LABEL[value])}</span>
       <span className="mt-0.5 block text-[14px] text-ink-soft">{t(ROLE_HINT[value])}</span>
     </button>
@@ -227,7 +227,7 @@ function SharePanel({ account, isOwner, onLeft }) {
               <p className="truncate text-[16px] font-medium">{owner?.full_name || t("Pemilik")} {owner?.id === user.id && <span className="text-ink-mute">({t("kamu")})</span>}</p>
               <p className="truncate text-[14px] text-ink-soft">{owner?.email}</p>
             </div>
-            <span className="chip bg-fill py-1 text-[#3a3d40]"><Crown className="h-3.5 w-3.5" /> {t("Pemilik")}</span>
+            <span className="chip bg-fill py-1 text-ink-soft"><Crown className="h-3.5 w-3.5" /> {t("Pemilik")}</span>
           </div>
           {members.map((m) => {
             const p = people[m.user_id];
@@ -241,7 +241,7 @@ function SharePanel({ account, isOwner, onLeft }) {
                 {isOwner ? (
                   <div className="flex flex-none items-center gap-1">
                     <select aria-label={t("Akses {name}", { name: p?.full_name || "" })} value={m.role} onChange={(e) => changeRole(m, e.target.value)}
-                      className="h-10 max-w-[180px] rounded-control border border-control bg-white px-3 text-[14px] font-medium">
+                      className="h-10 max-w-[180px] rounded-control border border-control bg-surface px-3 text-[14px] font-medium">
                       <option value="editor">{t(ROLE_LABEL.editor)}</option>
                       <option value="viewer">{t(ROLE_LABEL.viewer)}</option>
                     </select>
@@ -250,7 +250,7 @@ function SharePanel({ account, isOwner, onLeft }) {
                     </button>
                   </div>
                 ) : (
-                  <span className="chip bg-fill py-1 text-[#3a3d40]">{t(ROLE_LABEL[m.role])}</span>
+                  <span className="chip bg-fill py-1 text-ink-soft">{t(ROLE_LABEL[m.role])}</span>
                 )}
               </div>
             );

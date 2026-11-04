@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell } from "recharts";
 import { ChevronRight } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
+import { useTheme, chartColors } from "@/lib/theme";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui";
@@ -18,6 +19,7 @@ function loadState() {
 }
 
 export default function AnalysisPage() {
+  const C = chartColors(useTheme().isDark);
   const { categoryById, people, user, hidden, t, countsInStats, statRows } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
@@ -117,16 +119,16 @@ export default function AnalysisPage() {
             <div className="mt-3 h-56 min-h-56 flex-1">
               <ResponsiveContainer>
                 <BarChart data={data.bs} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#e5e5e5" />
+                  <CartesianGrid vertical={false} stroke={C.grid} />
                   <YAxis width={44} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5}
-                    tick={{ fontSize: 12, fill: "#5c6064" }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
-                  <XAxis dataKey="label" axisLine={{ stroke: "#c8cdd2" }} tickLine={false} tick={{ fontSize: 12, fill: "#5c6064" }}
+                    tick={{ fontSize: 12, fill: C.tick }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
+                  <XAxis dataKey="label" axisLine={{ stroke: C.axis }} tickLine={false} tick={{ fontSize: 12, fill: C.tick }}
                     interval={period === "month" ? 4 : 0} />
-                  <Tooltip cursor={{ fill: "#f3f5f7" }} formatter={(v) => [hidden ? "Rp •••••" : formatIDR(v), kind === "expense" ? t("Keluar") : t("Masuk")]}
-                    contentStyle={{ borderRadius: 10, border: "1px solid #e6e6e6", boxShadow: "none", fontSize: 14 }} />
-                  {avgBucket > 0 && <ReferenceLine y={avgBucket} stroke="#5c6064" strokeDasharray="4 4" />}
+                  <Tooltip cursor={{ fill: C.cursor }} formatter={(v) => [hidden ? "Rp •••••" : formatIDR(v), kind === "expense" ? t("Keluar") : t("Masuk")]}
+                    contentStyle={{ borderRadius: 12, border: `1px solid ${C.tipBorder}`, background: C.tipBg, boxShadow: "none", fontSize: 14 }} />
+                  {avgBucket > 0 && <ReferenceLine y={avgBucket} stroke={C.ref} strokeDasharray="4 4" />}
                   <Bar dataKey="total" radius={[3, 3, 0, 0]} maxBarSize={period === "month" ? 10 : 28}>
-                    {data.bs.map((b, i) => <Cell key={i} fill={b.start <= now && now < b.end ? ACCENT : b.start > now ? "#eef1f4" : NEUTRAL} />)}
+                    {data.bs.map((b, i) => <Cell key={i} fill={b.start <= now && now < b.end ? C.accent : b.start > now ? C.future : C.soft} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

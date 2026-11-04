@@ -84,7 +84,7 @@ export default function QuickEntry() {
         <AmountInput id="quick-amount" aria-label={t("Jumlah")} value={amount} onChange={setAmount} className="min-w-0 flex-1"
           onKeyDown={(e) => e.key === "Enter" && save()} />
         <select aria-label={t("Akun")} value={accountId} onChange={(e) => setAccountId(e.target.value)}
-          className="h-12 w-[38%] min-w-0 rounded-control border border-control bg-white px-3 text-[16px]">
+          className="h-12 w-[38%] min-w-0 rounded-control border-0 bg-fill px-3 text-[16px]">
           {writable.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </div>

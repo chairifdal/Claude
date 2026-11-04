@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell } from "recharts";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
+import { useTheme, chartColors } from "@/lib/theme";
 import { periodRange, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { lastPeriods, niceMax } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty } from "@/components/ui";
@@ -20,6 +21,7 @@ function initial() {
 }
 
 export default function CategoryDetail() {
+  const C = chartColors(useTheme().isDark);
   const { id } = useParams();
   const { categoryById, categories, budgets, people, user, hidden, t, countsInStats, statRows } = useApp();
   const [{ period, anchor, who }, setSt] = useState(initial);
@@ -140,16 +142,16 @@ export default function CategoryDetail() {
             <div className="mt-3 h-52 min-h-52 flex-1">
               <ResponsiveContainer>
                 <BarChart data={d.series} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="#e5e5e5" />
+                  <CartesianGrid vertical={false} stroke={C.grid} />
                   <YAxis width={44} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5}
-                    tick={{ fontSize: 12, fill: "#5c6064" }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
-                  <XAxis dataKey="label" axisLine={{ stroke: "#c8cdd2" }} tickLine={false} tick={{ fontSize: 12, fill: "#5c6064" }}
+                    tick={{ fontSize: 12, fill: C.tick }} tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
+                  <XAxis dataKey="label" axisLine={{ stroke: C.axis }} tickLine={false} tick={{ fontSize: 12, fill: C.tick }}
                     interval={0} tickFormatter={(v) => (period === "month" ? String(v).split(" ")[0].slice(0, 3) : period === "week" ? String(v).split("–")[0] : v)} />
-                  <Tooltip cursor={{ fill: "#f3f5f7" }} formatter={(v) => [hidden ? "Rp •••••" : formatIDR(v), cat.name]}
-                    contentStyle={{ borderRadius: 10, border: "1px solid #e6e6e6", boxShadow: "none", fontSize: 14 }} />
-                  {d.avg > 0 && <ReferenceLine y={d.avg} stroke="#5c6064" strokeDasharray="4 4" />}
+                  <Tooltip cursor={{ fill: C.cursor }} formatter={(v) => [hidden ? "Rp •••••" : formatIDR(v), cat.name]}
+                    contentStyle={{ borderRadius: 12, border: `1px solid ${C.tipBorder}`, background: C.tipBg, boxShadow: "none", fontSize: 14 }} />
+                  {d.avg > 0 && <ReferenceLine y={d.avg} stroke={C.ref} strokeDasharray="4 4" />}
                   <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={28}>
-                    {d.series.map((s, i) => <Cell key={i} fill={i === d.series.length - 1 ? ACCENT : NEUTRAL} />)}
+                    {d.series.map((s, i) => <Cell key={i} fill={i === d.series.length - 1 ? C.accent : C.soft} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>

@@ -47,12 +47,12 @@ export default function AppChrome() {
       {open && (
         <div className="fixed inset-0 z-40 animate-fade-in bg-black/25 backdrop-blur-[6px]" onClick={() => setOpen(false)}>
           <div className="absolute inset-x-0 bottom-28 mx-auto flex max-w-md justify-center px-6 pb-safe lg:bottom-auto lg:left-20 lg:right-auto lg:top-20 lg:block lg:px-0">
-            <div className="w-full max-w-[300px] animate-pop-in overflow-hidden rounded-[14px] bg-white/90 shadow-float backdrop-blur-2xl">
+            <div className="w-full max-w-[300px] animate-pop-in overflow-hidden rounded-[14px] bg-surface/90 shadow-float backdrop-blur-2xl">
               {ACTIONS.map((a, i) => {
                 const Icon = a.icon;
                 return (
                   <button key={a.type} onClick={(e) => { e.stopPropagation(); pick(a); }}
-                    className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-black/5 ${i ? "border-t border-black/10" : ""}`}>
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${i ? "border-t border-line" : ""}`}>
                     <span className="grid h-8 w-8 place-items-center rounded-[8px] text-white" style={{ background: a.color }}>
                       <Icon className="h-[18px] w-[18px]" strokeWidth={2.6} />
                     </span>
@@ -66,10 +66,10 @@ export default function AppChrome() {
       )}
 
       {/* HP: tab bar tembus pandang ala iOS */}
-      <nav aria-label="Navigasi utama" className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/75 pb-safe backdrop-blur-xl backdrop-saturate-150 lg:hidden">
+      <nav aria-label="Navigasi utama" className="fixed inset-x-0 bottom-0 z-40 border-t border-line/70 bg-surface/80 pb-safe backdrop-blur-xl backdrop-saturate-150 lg:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 items-end px-1 pt-1">
           {[TABS[0], TABS[1], null, TABS[2], TABS[3]].map((tab) => {
-            if (!tab) return <div key="add" className="flex justify-center">{addButton("-mt-5 h-[58px] w-[58px] ring-[5px] ring-white/80")}</div>;
+            if (!tab) return <div key="add" className="flex justify-center">{addButton("-mt-5 h-[58px] w-[58px] ring-[5px] ring-canvas")}</div>;
             const Icon = tab.icon;
             const active = isActive(tab.href);
             return (
@@ -84,7 +84,7 @@ export default function AppChrome() {
       </nav>
 
       {/* Desktop: sidebar ikon */}
-      <nav aria-label="Navigasi utama" className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-black/5 bg-white/70 py-5 backdrop-blur-xl lg:flex">
+      <nav aria-label="Navigasi utama" className="fixed inset-y-0 left-0 z-40 hidden w-[72px] flex-col items-center border-r border-line/60 bg-surface/70 py-5 backdrop-blur-xl lg:flex">
         <Link href="/" aria-label="Kantong Kita"><Mark size={40} /></Link>
         <div className="mt-6">{addButton("h-12 w-12")}</div>
         <div className="mt-6 flex flex-col gap-2">
@@ -102,7 +102,7 @@ export default function AppChrome() {
         <Link href="/pengaturan" title={t("Pengaturan")} aria-label={t("Pengaturan")}
           className={`relative mt-auto grid h-12 w-12 place-items-center rounded-[14px] ${isActive("/pengaturan") ? "bg-brand-600 text-white" : "text-ink-mute hover:bg-fill"}`}>
           <Settings className="h-[22px] w-[22px]" />
-          {invites.length > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-expense ring-2 ring-white" />}
+          {invites.length > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-expense ring-2 ring-surface" />}
         </Link>
       </nav>
     </>

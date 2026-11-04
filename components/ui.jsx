@@ -37,14 +37,14 @@ export function Sheet({ open, onClose, title, children, footer, full = false }) 
     <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 animate-fade-in bg-black/35" onClick={onClose} />
       <div className={`relative flex w-full max-w-md animate-sheet-up flex-col rounded-t-[14px] bg-canvas shadow-float lg:max-w-lg lg:rounded-[14px] ${panel}`}>
-        <div className="mx-auto mt-[6px] h-[5px] w-9 rounded-full bg-[#C7C7CC] lg:hidden" />
+        <div className="mx-auto mt-[6px] h-[5px] w-9 rounded-full bg-control lg:hidden" />
         <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pb-2 pt-2.5">
           <button onClick={onClose} className="justify-self-start text-[17px] text-brand-600 active:opacity-50">{t("Batal")}</button>
           <h2 className="max-w-[60vw] truncate text-[17px] font-semibold">{title}</h2>
           <span />
         </div>
         <div className={`flex-1 overflow-y-auto px-4 no-scrollbar ${footer || full ? "" : "pb-safe"}`}>{children}</div>
-        {footer && <div className="border-t border-line bg-white/80 px-4 pt-3 pb-safe backdrop-blur-xl">{footer}</div>}
+        {footer && <div className="border-t border-line bg-surface/80 px-4 pt-3 pb-safe backdrop-blur-xl">{footer}</div>}
       </div>
     </div>
   );
@@ -80,7 +80,7 @@ export function Avatar({ profile, size = 32 }) {
   const name = profile?.full_name || profile?.email || "?";
   const h = personHue(profile?.id);
   return (
-    <span title={name} aria-hidden="true" className="grid shrink-0 place-items-center rounded-full font-semibold text-white ring-2 ring-white"
+    <span title={name} aria-hidden="true" className="grid shrink-0 place-items-center rounded-full font-semibold text-white ring-2 ring-canvas"
       style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(145deg, hsl(${h} 90% 64%), hsl(${(h + 30) % 360} 80% 46%))` }}>
       {name.trim().charAt(0).toUpperCase()}
     </span>
@@ -110,7 +110,7 @@ export function PageHeader({ title, subtitle, back, right }) {
 
 export function Empty({ title, text, action, icon: Icon = Inbox }) {
   return (
-    <div className="flex flex-col items-center rounded-card bg-white px-5 py-8 text-center">
+    <div className="flex flex-col items-center rounded-card bg-surface px-5 py-8 text-center">
       <span className="grid h-14 w-14 place-items-center rounded-[16px] bg-gradient-to-br from-brand-400 to-transfer text-white"><Icon className="h-7 w-7" /></span>
       <p className="mt-3 text-[17px] font-semibold">{title}</p>
       {text && <p className="mt-1 max-w-[280px] text-[15px] text-ink-soft">{text}</p>}
@@ -139,7 +139,7 @@ export function Segmented({ value, onChange, options, className = "" }) {
     <div role="tablist" className={`grid gap-0.5 rounded-[10px] bg-fill p-[2px] ${className}`} style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0,1fr))` }}>
       {options.map((o) => (
         <button key={o.value} type="button" role="tab" aria-selected={value === o.value} onClick={() => onChange(o.value)}
-          className={`h-8 truncate rounded-[8px] px-2 text-[14px] transition ${value === o.value ? "bg-white font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
+          className={`h-8 truncate rounded-[8px] px-2 text-[14px] transition ${value === o.value ? "bg-seg font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
           {o.label}
         </button>
       ))}
@@ -157,7 +157,7 @@ export function Switch({ id, checked, onChange, label, description }) {
       </div>
       <button id={id} type="button" role="switch" aria-checked={checked} aria-labelledby={`${id}-label`}
         aria-describedby={description ? `${id}-desc` : undefined} onClick={() => onChange(!checked)}
-        className={`relative h-[31px] w-[51px] flex-none rounded-full transition-colors duration-200 ${checked ? "bg-income-bright" : "bg-[#E9E9EA]"}`}>
+        className={`relative h-[31px] w-[51px] flex-none rounded-full transition-colors duration-200 ${checked ? "bg-income-bright" : "bg-switchoff"}`}>
         <span className={`absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-seg transition-[left] duration-200 ${checked ? "left-[22px]" : "left-[2px]"}`} />
       </button>
     </div>

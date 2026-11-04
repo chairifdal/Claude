@@ -15,7 +15,7 @@ export default function PeriodBar({ period, anchor, onChange }) {
         { value: "month", label: t("Bulan") },
         { value: "year", label: t("Tahun") },
       ]} />
-      <div className="flex flex-1 items-center justify-between rounded-full bg-white p-1 shadow-card sm:max-w-[320px]">
+      <div className="flex flex-1 items-center justify-between rounded-full bg-surface p-1 shadow-card sm:max-w-[320px]">
         <button className="grid h-10 w-10 place-items-center rounded-full text-brand-600 active:bg-fill" onClick={() => onChange(period, shiftPeriod(period, anchor, -1))} aria-label={t("Periode sebelumnya")}>
           <ChevronLeft className="h-5 w-5" />
         </button>

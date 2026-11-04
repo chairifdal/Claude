@@ -38,7 +38,7 @@ export default function CategoriesPage() {
                 </button>
                 <div className="flex flex-wrap gap-2 border-t border-rule px-4 py-3">
                   {subs.map((s) => (
-                    <button key={s.id} onClick={() => setEdit({ category: s })} className="chip h-9 border border-line bg-white text-ink">
+                    <button key={s.id} onClick={() => setEdit({ category: s })} className="chip h-9 border border-transparent bg-fill text-ink">
                       <CornerDownRight className="h-3.5 w-3.5 text-ink-soft" /> {s.name}
                     </button>
                   ))}
@@ -124,7 +124,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
                 <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
                   {icons.map(([k, Icon]) => (
                     <button key={k} type="button" onClick={() => setIcon(k)} aria-label={k} aria-pressed={icon === k}
-                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white text-ink-soft hover:text-ink"}`}>
+                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink-soft hover:text-ink"}`}>
                       <Icon className="h-5 w-5" strokeWidth={1.6} />
                     </button>
                   ))}

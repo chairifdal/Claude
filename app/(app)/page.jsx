@@ -135,7 +135,7 @@ export default function HomePage() {
           </section>
 
           {finding && (
-            <div className={`flex items-start gap-3 rounded-card p-4 shadow-card ${finding.tone === "bad" ? "bg-expense-soft" : finding.tone === "warn" ? "bg-warn-soft" : "bg-white"}`}>
+            <div className={`flex items-start gap-3 rounded-card p-4 shadow-card ${finding.tone === "bad" ? "bg-expense-soft" : finding.tone === "warn" ? "bg-warn-soft" : "bg-surface"}`}>
               <span className={`grid h-9 w-9 flex-none place-items-center rounded-[10px] text-white ${finding.tone === "bad" ? "bg-expense" : finding.tone === "warn" ? "bg-warn" : "bg-gradient-to-br from-[#34C759] to-[#00C7BE]"}`}>
                 <Sparkles className="h-5 w-5" />
               </span>

@@ -58,7 +58,7 @@ export default function LoginPage() {
         <div role="tablist" className="grid grid-cols-2 gap-0.5 rounded-[10px] bg-fill p-[2px]">
           {[["login", t("Masuk")], ["signup", t("Daftar")]].map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => { setMode(k); setMsg(null); }}
-              className={`h-9 rounded-[8px] text-[15px] transition ${mode === k ? "bg-white font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
+              className={`h-9 rounded-[8px] text-[15px] transition ${mode === k ? "bg-seg font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
               {l}
             </button>
           ))}

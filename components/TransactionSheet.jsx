@@ -122,7 +122,7 @@ function TxForm({ init }) {
 
   // Tombol simpan menempel di bawah layar (sticky di dalam area scroll)
   const footer = (
-      <div className="sticky bottom-0 -mx-5 mt-6 flex gap-2 border-t border-line bg-white px-5 pt-3 pb-safe">
+      <div className="sticky bottom-0 -mx-4 mt-6 flex gap-2 border-t border-line bg-canvas/90 px-4 pt-3 pb-safe backdrop-blur-xl">
         {editing && (confirmDelete
           ? <button className="btn-danger" onClick={remove} disabled={busy}>{t("Yakin hapus?")}</button>
           : <button className="btn-danger w-12 px-0" onClick={() => setConfirmDelete(true)} aria-label={t("Hapus")}><Trash2 className="h-5 w-5" /></button>)}

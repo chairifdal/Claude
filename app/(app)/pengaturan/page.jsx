@@ -2,8 +2,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages, Repeat } from "lucide-react";
+import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
 import { useApp } from "@/lib/app-data";
+import { useTheme } from "@/lib/theme";
 import { ROLE_LABEL } from "@/lib/constants";
 import { Avatar, PageHeader, Segmented, Switch } from "@/components/ui";
 
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { supabase, profile, invites, notify, refresh, hidden, toggleHidden, t, locale, setLocale } = useApp();
   const [name, setName] = useState(null);
+  const { pref, setPref } = useTheme();
 
   async function respond(inv, accept) {
     const { error } = await supabase.rpc("respond_invite", { invite_id: inv.id, accept });
@@ -88,6 +90,16 @@ export default function SettingsPage() {
             { value: "id", label: "Bahasa Indonesia" },
             { value: "en", label: "English" },
           ]} />
+        </section>
+
+        <section className="card p-5">
+          <p className="flex items-center gap-3 text-[17px]"><span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#5856D6] text-white"><Moon className="h-[18px] w-[18px]" /></span> {t("Tampilan")}</p>
+          <Segmented value={pref} onChange={setPref} className="mt-3" options={[
+            { value: "system", label: t("Otomatis") },
+            { value: "light", label: t("Terang") },
+            { value: "dark", label: t("Gelap") },
+          ]} />
+          <p className="mt-2 text-[14px] text-ink-soft">{t("Otomatis mengikuti pengaturan terang/gelap di HP.")}</p>
         </section>
 
         <section className="card p-5">

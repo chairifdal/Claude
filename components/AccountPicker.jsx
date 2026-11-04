@@ -20,7 +20,7 @@ export default function AccountPicker({ id, label, accounts, value, onChange, pl
   return (
     <div>
       {label && <p id={`${id}-label`} className="label">{label}</p>}
-      <div className="rounded-control border border-line bg-white">
+      <div className="rounded-control bg-surface shadow-card">
         <button type="button" aria-expanded={open} aria-labelledby={label ? `${id}-label` : undefined} onClick={() => setOpen((o) => !o)}
           className="flex min-h-[60px] w-full items-center gap-3 px-3 py-2 text-left">
           {selected ? (
