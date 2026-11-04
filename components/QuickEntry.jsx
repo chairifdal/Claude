@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
 import { parseAmount, amountToInput, formatIDR } from "@/lib/format";
 import { CategoryIcon, Segmented } from "./ui";
@@ -39,9 +39,27 @@ export default function QuickEntry() {
     const pool = categories.filter((c) => c.kind === type && c.owner_id === ownerId);
     const used = pool.filter((c) => count[c.id]).sort((a, b) => count[b.id] - count[a.id]);
     const roots = pool.filter((c) => !c.parent_id && !count[c.id]);
-    // Semua kategori: yang sering dipakai di depan, sisanya kategori utama; digeser ke samping bila lebih dari 8
+    // Semua kategori: yang sering dipakai di depan, sisanya kategori utama
     return [...used, ...roots];
   }, [rows, categories, type, ownerId]);
+
+  // Per halaman 8 kategori (4 x 2); halaman berikutnya digeser (HP) atau diklik panah (desktop)
+  const PAGE = 8;
+  const pages = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < frequent.length; i += PAGE) out.push(frequent.slice(i, i + PAGE));
+    return out;
+  }, [frequent]);
+  const pagerRef = useRef(null);
+  const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); if (pagerRef.current) pagerRef.current.scrollLeft = 0; }, [type, ownerId]);
+  function goPage(i) {
+    const el = pagerRef.current;
+    if (!el) return;
+    const n = Math.max(0, Math.min(pages.length - 1, i));
+    el.scrollTo({ left: n * el.clientWidth, behavior: "smooth" });
+    setPage(n);
+  }
 
   // Catatan yang berulang: kategori + nominal yang sama ≥ 2 kali
   const repeats = useMemo(() => {
@@ -102,17 +120,42 @@ export default function QuickEntry() {
         </div>
       )}
 
-      <div className="-mx-5 mt-4 grid snap-x auto-cols-[calc((100%-2.5rem-0.75rem)/4)] grid-flow-col grid-rows-2 gap-1 overflow-x-auto px-5 pb-1 no-scrollbar">
-        {frequent.map((c) => {
-          const active = categoryId === c.id;
-          return (
-            <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? "" : c.id)}
-              className={`flex snap-start flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
-              <CategoryIcon category={c} size={28} />
-              <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
+      <div className="relative mt-4">
+        <div ref={pagerRef} className="flex snap-x snap-mandatory overflow-x-auto no-scrollbar"
+          onScroll={(e) => { const el = e.currentTarget; setPage(Math.round(el.scrollLeft / el.clientWidth)); }}>
+          {pages.map((items, pi) => (
+            <div key={pi} className="grid w-full flex-none snap-start snap-always grid-cols-4 content-start gap-1">
+              {items.map((c) => {
+                const active = categoryId === c.id;
+                return (
+                  <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? "" : c.id)}
+                    className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
+                    <CategoryIcon category={c} size={28} />
+                    <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {pages.length > 1 && (
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <button type="button" aria-label={t("Sebelumnya")} onClick={() => goPage(page - 1)} disabled={page === 0}
+              className="hidden h-7 w-7 place-items-center rounded-full bg-fill text-ink-soft disabled:opacity-30 md:grid">
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          );
-        })}
+            <div className="flex gap-1.5" role="tablist">
+              {pages.map((_, i) => (
+                <button key={i} type="button" role="tab" aria-selected={i === page} aria-label={t("Halaman {n}", { n: i + 1 })} onClick={() => goPage(i)}
+                  className={`h-1.5 rounded-full transition-all ${i === page ? "w-4 bg-brand-600" : "w-1.5 bg-ink-mute/40"}`} />
+              ))}
+            </div>
+            <button type="button" aria-label={t("Berikutnya")} onClick={() => goPage(page + 1)} disabled={page === pages.length - 1}
+              className="hidden h-7 w-7 place-items-center rounded-full bg-fill text-ink-soft disabled:opacity-30 md:grid">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex gap-2">
