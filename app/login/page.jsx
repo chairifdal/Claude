@@ -56,7 +56,7 @@ export default function LoginPage() {
 
       <div className="card relative -mt-8 p-5">
         <div role="tablist" className="grid grid-cols-2 gap-0.5 rounded-[10px] bg-fill p-[2px]">
-          {[["login", t("Masuk")], ["signup", t("Daftar")]].map(([k, l]) => (
+          {[["login", t("Masuk akun")], ["signup", t("Daftar akun")]].map(([k, l]) => (
             <button key={k} type="button" role="tab" aria-selected={mode === k} onClick={() => { setMode(k); setMsg(null); }}
               className={`h-9 rounded-[8px] text-[15px] transition ${mode === k ? "bg-seg font-semibold text-ink shadow-seg" : "font-medium text-ink"}`}>
               {l}
@@ -93,7 +93,7 @@ export default function LoginPage() {
           )}
 
           <button className="btn-primary w-full" disabled={busy}>
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{mode === "login" ? t("Masuk") : t("Buat akun")} <ArrowRight className="h-5 w-5" /></>}
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{mode === "login" ? t("Masuk akun") : t("Buat akun")} <ArrowRight className="h-5 w-5" /></>}
           </button>
         </form>
       </div>
