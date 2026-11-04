@@ -2,23 +2,28 @@
 import { useMemo, useState } from "react";
 import { Search, Download } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
-import { monthRange, monthLabel, firstName } from "@/lib/format";
-import { Money, PageHeader } from "@/components/ui";
+import { periodRange, periodLabel, firstName } from "@/lib/format";
+import { toISODate } from "@/lib/analytics";
+import { Money, PageHeader, Segmented } from "@/components/ui";
 import { TxGroupedList, txDirection } from "@/components/TxList";
-import MonthSwitcher from "@/components/MonthSwitcher";
+import PeriodBar from "@/components/PeriodBar";
 
 const FILTERS = [
   { value: "all", label: "Semua" },
   { value: "expense", label: "Pengeluaran" },
   { value: "income", label: "Pemasukan" },
   { value: "transfer", label: "Transfer" },
-  { value: "partner", label: "Oleh pasangan" },
 ];
 
 export default function ActivityPage() {
-  const { accountById, categoryById, user, accounts, people, t } = useApp();
-  const [month, setMonth] = useState(() => monthRange().start);
-  const { start, end } = useMemo(() => monthRange(month), [month]);
+  const { accountById, categoryById, user, accounts, people, t, cycle, statRows, countsInStats } = useApp();
+  const [period, setPeriod] = useState("month");
+  const [anchor, setAnchor] = useState(() => new Date());
+  const [range, setRange] = useState(() => ({ from: toISODate(new Date(Date.now() - 29 * 86400000)), to: toISODate(new Date()) }));
+  const [who, setWho] = useState("all");
+  // Periode "Bulan" mengikuti siklus saya (gajian / tanggal tetap) saat melihat Semua atau Saya
+  const ctx = { cycle: who === "all" || who === user?.id ? cycle : null, range };
+  const { start, end } = periodRange(period, anchor, ctx);
   // ?akun=<id> dari halaman detail akun (layout hanya render di client, jadi window aman)
   const [accountId, setAccountId] = useState(() => new URLSearchParams(window.location.search).get("akun") || "");
   const { rows } = useTransactions({ from: start, to: end, limit: 5000, accountId: accountId || undefined });
@@ -26,14 +31,22 @@ export default function ActivityPage() {
   const [q, setQ] = useState("");
 
   const list = useMemo(() => rows.filter((tx) => {
-    if (filter === "partner" && tx.created_by === user?.id) return false;
+    if (who !== "all" && tx.created_by !== who) return false;
     if (["expense", "income", "transfer"].includes(filter) && tx.type !== filter) return false;
     if (q) {
       const hay = [tx.note, categoryById[tx.category_id]?.name, tx.account_name, tx.to_account_name].join(" ").toLowerCase();
       if (!hay.includes(q.toLowerCase())) return false;
     }
     return true;
-  }), [rows, filter, q, user, categoryById]);
+  }), [rows, filter, q, who, categoryById]);
+
+  // Arus kas daftar ini (sama dengan Analisis: tanpa transfer & penyesuaian, biaya transfer = pengeluaran)
+  const flow = statRows(list).filter(countsInStats).reduce((f, r) => {
+    if (r.type === "income") f.inc += r.amount; else if (r.type === "expense") f.exp += r.amount;
+    return f;
+  }, { inc: 0, exp: 0 });
+  const persons = [{ value: "all", label: t("Semua") }, ...Object.values(people).sort((a, b) => (a.id === user?.id ? -1 : b.id === user?.id ? 1 : 0))
+    .map((p) => ({ value: p.id, label: p.id === user?.id ? t("Saya") : firstName(p) }))];
 
   const net = list.reduce((s, tx) => {
     const d = txDirection(tx, accountById, accountId || undefined);
@@ -63,17 +76,21 @@ export default function ActivityPage() {
     const blob = new Blob(["﻿" + [head.map(esc).join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `kantong-kita-${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}.csv`; // taste-skill-ignore: tanggal di nama file
+    a.download = `kantong-kita-${toISODate(start)}_${toISODate(new Date(end - 86400000))}.csv`; // taste-skill-ignore: tanggal di nama file
     a.click();
     URL.revokeObjectURL(a.href);
   }
 
   return (
     <div>
-      <PageHeader title={t("Aktivitas")} subtitle={monthLabel(month)} back="/"
+      <PageHeader title={t("Aktivitas")} subtitle={periodLabel(period, anchor, ctx)} back="/"
         right={<button className="btn-ghost h-10 px-4 text-[14px]" onClick={exportCsv} disabled={!list.length}><Download className="h-4 w-4" /> CSV</button>} />
       <div className="max-w-[720px]">
-        <MonthSwitcher value={month} onChange={setMonth} />
+        <div className="space-y-3">
+          {persons.length > 2 && <Segmented value={who} onChange={setWho} className="w-full" options={persons} />}
+          <PeriodBar period={period} anchor={anchor} ctx={ctx} allowRange range={range} onRange={setRange}
+            onChange={(p, a) => { setPeriod(p); setAnchor(a); }} />
+        </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-soft" />
@@ -89,6 +106,14 @@ export default function ActivityPage() {
           {FILTERS.map((f) => (
             <button key={f.value} onClick={() => setFilter(f.value)} aria-pressed={filter === f.value}
               className={`chip h-10 shrink-0 border ${filter === f.value ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>{t(f.label)}</button>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {[[t("Masuk"), flow.inc, "#34C759", true], [t("Keluar"), flow.exp, "#FF3B30", false], [t("Sisa"), flow.inc - flow.exp, flow.inc - flow.exp >= 0 ? "#007AFF" : "#FF3B30", true]].map(([l, v, c, sg]) => (
+            <div key={l} className="min-w-0 rounded-[14px] p-3" style={{ background: `${c}17` }}>
+              <p className="text-[13px] font-semibold" style={{ color: c }}>{l}</p>
+              <Money value={v} compact sign={sg} className="block text-[17px] font-bold tracking-tight" dots={4} />
+            </div>
           ))}
         </div>
         <div className="my-4 flex items-center justify-between gap-3 text-[14px] text-ink-soft">

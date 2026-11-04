@@ -5,7 +5,7 @@ import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownL
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { monthRange, firstName, formatIDR } from "@/lib/format";
 import { daysBetween } from "@/lib/period";
-import { billStatus } from "@/lib/bills";
+import { billStatus, cardBills } from "@/lib/bills";
 import { AccountGlyph, Avatar, Money, Empty, CategoryIcon } from "@/components/ui";
 import { TxGroupedList } from "@/components/TxList";
 import QuickEntry from "@/components/QuickEntry";
@@ -14,7 +14,8 @@ import GoalsCard from "@/components/GoalsCard";
 
 export default function HomePage() {
   const { profile, people, accounts, hidden, toggleHidden, openAccount, openTx, categoryById, invites, user, loading, budgets, bills, accountById,
-    supabase, notify, refresh, t, countsInStats, statRows, cycle, salaryRoot } = useApp();
+    supabase, notify, refresh, t, countsInStats, statRows, cycle, salaryRoot, homeHidden } = useApp();
+  const show = (key) => !homeHidden.includes(key);
   // Tagihan memakai bulan kalender; ringkasan memakai periode keuangan (kalender / gajian / tanggal tetap)
   const cal = useMemo(() => monthRange(), []);
   const per = cycle.rangeOf(new Date());
@@ -31,7 +32,8 @@ export default function HomePage() {
   const liquid = accounts.filter((a) => ["cash", "bank", "ewallet"].includes(a.kind));
   const totalLiquid = liquid.reduce((s, a) => s + a.balance, 0);
   const isShared = (a) => a && (a.owner_id !== user?.id || a.member_count > 0);
-  const unpaidBills = bills.filter((b) => accountById[b.account_id] && billStatus(b, monthRows).state !== "paid").reduce((s, b) => s + b.amount, 0);
+  const unpaidBills = bills.filter((b) => accountById[b.account_id] && billStatus(b, monthRows).state !== "paid").reduce((s, b) => s + b.amount, 0)
+    + cardBills(accounts).reduce((s, c) => s + c.amount, 0);
 
   const m = useMemo(() => {
     let income = 0, expense = 0, mine = 0, shared = 0, partnerSpent = 0;
@@ -148,7 +150,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          {finding && (
+          {show("insight") && finding && (
             <div className={`flex items-start gap-3 rounded-card p-4 shadow-card ${finding.tone === "bad" ? "bg-expense-soft" : finding.tone === "warn" ? "bg-warn-soft" : "bg-surface"}`}>
               <span className={`grid h-9 w-9 flex-none place-items-center rounded-[10px] text-white ${finding.tone === "bad" ? "bg-expense" : finding.tone === "warn" ? "bg-warn" : "bg-gradient-to-br from-[#34C759] to-[#00C7BE]"}`}>
                 <Sparkles className="h-5 w-5" />
@@ -160,9 +162,10 @@ export default function HomePage() {
             </div>
           )}
 
-          <QuickEntry />
-          <BillsCard monthRows={monthRows} />
+          {show("quick") && <QuickEntry />}
+          {show("bills") && <BillsCard monthRows={monthRows} />}
 
+{show("couple") && (<>
           {/* Kita berdua */}
           <section className="card p-5">
             <div className="flex items-baseline justify-between">
@@ -193,7 +196,9 @@ export default function HomePage() {
               </Link>
             )}
           </section>
+          </>)}
 
+{show("spending") && (<>
           {/* Komposisi pengeluaran */}
           <section className="card p-5">
             <div className="flex items-baseline justify-between">
@@ -229,9 +234,12 @@ export default function HomePage() {
               <div className="mt-3"><Empty title={t("Belum ada pengeluaran bulan ini")} text={t("Catatan pertama akan muncul di sini, dikelompokkan per kategori.")} /></div>
             )}
           </section>
+          </>)}
+
         </div>
 
         <div className="min-w-0 space-y-5">
+{show("accounts") && (<>
           {/* Akun: kartu kecil yang bisa digeser */}
           <section>
             <div className="mb-2 flex items-baseline justify-between px-1">
@@ -259,9 +267,11 @@ export default function HomePage() {
                 action={<button className="btn-primary h-11 text-[16px]" onClick={() => openAccount({})}>{t("Buat akun")}</button>} /></div>
             )}
           </section>
+          </>)}
 
-          <GoalsCard />
+          {show("goals") && <GoalsCard />}
 
+          {show("recent") && (
           <section>
             <div className="mb-2 flex items-baseline justify-between px-1">
               <h2 className="section-title">{t("Terakhir dicatat")}</h2>
@@ -269,6 +279,7 @@ export default function HomePage() {
             </div>
             <TxGroupedList rows={recent} />
           </section>
+          )}
         </div>
       </div>
     </div>

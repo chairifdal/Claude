@@ -159,6 +159,7 @@ export function AppDataProvider({ children }) {
     const canRecord = (a) => a && (a.my_role === "owner" || a.my_role === "editor");
     return {
       statRows, personHue, countsInStats, canRecord, bills, t, locale, setLocale, cycle, savePeriod,
+      saveProfile: savePeriod, homeHidden: profile?.home_hidden || [],
       salaryRoot: salaryRootFor(profile, categories),
       lastAccountId: () => { try { return localStorage.getItem("kk-last-account"); } catch { return null; } },
       rememberAccount: (id) => { try { localStorage.setItem("kk-last-account", id); } catch {} },

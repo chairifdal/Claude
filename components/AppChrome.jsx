@@ -15,7 +15,7 @@ const TABS = [
 const ACTIONS = [
   { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
   { type: "income", label: "Pemasukan", icon: Plus, color: "#34C759" },
-  { type: "transfer", label: "Transfer / kirim ke pasangan", icon: ArrowLeftRight, color: "#007AFF" },
+  { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#007AFF" },
   { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, color: "#FF9500" },
 ];
 

@@ -30,7 +30,9 @@ function TxForm({ init }) {
   const sources = useMemo(() => (type === "transfer" ? accounts : accounts.filter(canRecord)), [accounts, type, canRecord]);
   const pickDefault = () => {
     const prefer = [editing?.account_id, init.accountId, lastAccountId()];
-    return prefer.find((id) => id && sources.some((a) => a.id === id)) || sources[0]?.id || "";
+    // Akun asal tidak boleh sama dengan akun tujuan (mis. bayar tagihan kartu dari kartu itu sendiri)
+    const ok = (id) => id && id !== init.toAccountId && sources.some((a) => a.id === id);
+    return prefer.find(ok) || sources.find((a) => a.id !== init.toAccountId && a.kind !== "credit")?.id || sources.find((a) => a.id !== init.toAccountId)?.id || "";
   };
 
   const [amount, setAmount] = useState(editing ? amountToInput(editing.amount) : init.amount ? amountToInput(init.amount) : "");

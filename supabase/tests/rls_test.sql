@@ -191,5 +191,21 @@ do $$ begin
   raise exception 'should not reach';
 exception when check_violation then null; end $$;
 
+-- ===== 005: jatuh tempo kartu & widget Beranda =====
+select pg_temp.as_user('a');
+update accounts set due_day = 17 where id='aaaaaaaa-0000-0000-0000-000000000002';
+do $$ begin
+  assert (select due_day from account_balances where id='aaaaaaaa-0000-0000-0000-000000000002') = 17, 'due_day in view';
+  update accounts set due_day = 40 where id='aaaaaaaa-0000-0000-0000-000000000002';
+  raise exception 'should not reach';
+exception when check_violation then null; end $$;
+update profiles set home_hidden = array['goals','recent'] where id=auth.uid();
+do $$ begin assert (select home_hidden from profiles where id=auth.uid()) = array['goals','recent'], 'home_hidden'; end $$;
+-- B tidak bisa mengubah pengaturan profil A
+select pg_temp.as_user('b');
+update profiles set home_hidden = '{}' where id='00000000-0000-0000-0000-00000000000a';
+select pg_temp.as_user('a');
+do $$ begin assert (select home_hidden from profiles where id=auth.uid()) = array['goals','recent'], 'B cannot edit A profile'; end $$;
+
 reset role;
 \echo ALL RLS TESTS PASSED

@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Plus, CornerDownRight, Loader2, Trash2, Search } from "lucide-react";
+import { Plus, CornerDownRight, Loader2, Trash2, Search, Check } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { ICON_GROUPS } from "@/lib/constants";
+import { ICON_GROUPS, CATEGORY_COLORS } from "@/lib/constants";
 import { CategoryIcon, PageHeader, Segmented, Sheet } from "@/components/ui";
 
 export default function CategoriesPage() {
@@ -68,7 +68,8 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const color = category?.color || parent?.color || roots.find((r) => r.id === parentId)?.color || "#64748B";
+  // Warna: tile ikon dan grafik memakai warna ini. Sub-kategori baru mengikuti warna induknya sebagai awal.
+  const [color, setColor] = useState(category?.color || parent?.color || CATEGORY_COLORS[9]);
 
   async function save() {
     if (!name.trim()) return;
@@ -95,7 +96,7 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
       <div>
         <label htmlFor="cat-name" className="label">{t("Nama")}</label>
         <div className="flex items-center gap-3">
-          <span className="grid h-12 w-12 flex-none place-items-center rounded-control border border-line"><CategoryIcon category={{ icon }} size={28} /></span>
+          <span className="grid h-12 w-12 flex-none place-items-center"><CategoryIcon category={{ icon, color }} size={40} /></span>
           <input id="cat-name" className="field" placeholder={t("mis. Gas LPG")} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
       </div>
@@ -109,6 +110,16 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
       </div>
 
       <div>
+        <p className="label">{t("Warna")}</p>
+        <div className="mb-6 grid grid-cols-8 gap-2.5">
+          {CATEGORY_COLORS.map((c) => (
+            <button key={c} type="button" onClick={() => setColor(c)} aria-label={c} aria-pressed={color === c}
+              className="grid aspect-square place-items-center rounded-full transition active:scale-90"
+              style={{ background: c, boxShadow: color === c ? `0 0 0 2px rgb(var(--surface)), 0 0 0 4px ${c}` : undefined }}>
+              {color === c && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+            </button>
+          ))}
+        </div>
         <p className="label">{t("Ikon")}</p>
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-soft" />
@@ -123,8 +134,8 @@ function CategoryForm({ category, parent, kind, roots, onDone }) {
                 <p className="mb-2 text-[14px] text-ink-soft">{t(g.label)}</p>
                 <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-9">
                   {icons.map(([k, Icon]) => (
-                    <button key={k} type="button" onClick={() => setIcon(k)} aria-label={k} aria-pressed={icon === k}
-                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink-soft hover:text-ink"}`}>
+                    <button key={k} type="button" onClick={() => setIcon(k)} aria-label={k} aria-pressed={icon === k} style={icon === k ? { background: color } : undefined}
+                      className={`grid aspect-square place-items-center rounded-control border transition ${icon === k ? "border-transparent text-white" : "border-transparent bg-fill text-ink-soft hover:text-ink"}`}>
                       <Icon className="h-5 w-5" strokeWidth={1.6} />
                     </button>
                   ))}

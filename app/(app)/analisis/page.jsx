@@ -7,7 +7,7 @@ import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
-import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented } from "@/components/ui";
+import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented, AccountGlyph } from "@/components/ui";
 import PeriodBar, { FilterChip } from "@/components/PeriodBar";
 import { TxRow } from "@/components/TxList";
 
@@ -24,7 +24,7 @@ function loadState() {
 
 export default function AnalysisPage() {
   const C = chartColors(useTheme().isDark);
-  const { categoryById, people, user, hidden, t, countsInStats, statRows, cycle } = useApp();
+  const { categoryById, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
@@ -66,9 +66,23 @@ export default function AnalysisPage() {
     for (const r of cur) byPerson[r.created_by] = (byPerson[r.created_by] || 0) + r.amount;
     // 5 transaksi terbesar (pakai baris asli, bukan baris biaya transfer)
     const top = cur.filter((r) => !r.isFee).sort((a, b) => b.amount - a.amount).slice(0, 5);
-    return { total, prevTotal, income, expense, groups: Object.values(groups).sort((a, b) => b.total - a.total), bs, top,
+    // Investasi: transfer ke/dari akun bertipe Investasi di periode ini (mengikuti filter orang)
+    const isInv = (id) => accountById[id]?.kind === "investment";
+    const inv = { in: 0, out: 0, change: 0, perAccount: {} };
+    for (const r of rows) {
+      const d = new Date(r.occurred_at);
+      if (d < start || d >= end || (who !== "all" && r.created_by !== who)) continue;
+      if (r.type === "transfer") {
+        if (isInv(r.to_account_id) && !isInv(r.account_id)) { inv.in += r.amount; inv.perAccount[r.to_account_id] = (inv.perAccount[r.to_account_id] || 0) + r.amount; }
+        if (isInv(r.account_id) && !isInv(r.to_account_id)) { inv.out += r.amount; inv.perAccount[r.account_id] = (inv.perAccount[r.account_id] || 0) - r.amount; }
+      } else if (r.is_adjustment && isInv(r.account_id)) {
+        // Kenaikan/penurunan nilai pasar dicatat lewat "Sesuaikan saldo"
+        inv.change += r.type === "income" ? r.amount : -r.amount;
+      }
+    }
+    return { inv, total, prevTotal, income, expense, groups: Object.values(groups).sort((a, b) => b.total - a.total), bs, top,
       byPerson: Object.entries(byPerson).sort((a, b) => b[1] - a[1]), count: cur.length };
-  }, [rows, kind, who, group, period, anchor, start.getTime(), end.getTime(), categoryById, countsInStats, statRows, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rows, kind, who, group, period, anchor, start.getTime(), end.getTime(), categoryById, accountById, countsInStats, statRows, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const days = daysIn(period, anchor, ctx);
   const delta = data.total - data.prevTotal;
@@ -79,6 +93,8 @@ export default function AnalysisPage() {
   const yMax = niceMax(Math.max(...data.bs.map((b) => b.total), 0));
   const now = new Date();
   const saved = data.income - data.expense;
+  const invAccounts = accounts.filter((a) => a.kind === "investment" && (who === "all" || a.owner_id === who || who === user?.id));
+  const portfolio = invAccounts.reduce((s, a) => s + a.balance, 0);
   const saveRate = data.income > 0 ? saved / data.income : null;
 
   const persons = [{ value: "all", label: t("Semua") }, ...Object.values(people).sort((a, b) => (a.id === user?.id ? -1 : b.id === user?.id ? 1 : 0))
@@ -146,6 +162,46 @@ export default function AnalysisPage() {
               </div>
             )}
           </section>
+
+          {/* Investasi */}
+          {invAccounts.length > 0 && (
+            <section className="card p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="section-title">{t("Investasi")}</h2>
+                <span className="text-[13px] text-ink-soft">{t("Portofolio")} <Money value={portfolio} compact className="font-semibold text-ink" dots={4} /></span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <Flow label={t("Disetor")} value={data.inv.in} color="#AF52DE" />
+                <Flow label={t("Ditarik")} value={data.inv.out} color="#FF9500" />
+                <Flow label={t("Bersih")} value={data.inv.in - data.inv.out} color={data.inv.in - data.inv.out >= 0 ? "#5856D6" : "#FF3B30"} sign />
+              </div>
+              {data.income > 0 && data.inv.in - data.inv.out > 0 && (
+                <p className="mt-3 text-[14px] text-ink-soft">
+                  {t("{pct}% dari pemasukan periode ini diinvestasikan.", { pct: Math.round(((data.inv.in - data.inv.out) / data.income) * 100) })}
+                </p>
+              )}
+              {data.inv.change !== 0 && (
+                <p className="mt-1 text-[14px] text-ink-soft">
+                  {t("Perubahan nilai (dari Sesuaikan saldo)")}: <Money value={data.inv.change} sign className={`font-semibold ${data.inv.change >= 0 ? "text-income" : "text-expense"}`} dots={4} />
+                </p>
+              )}
+              <ul className="mt-3 divide-y divide-line">
+                {invAccounts.map((a) => (
+                  <li key={a.id}>
+                    <Link href={`/dompet/${a.id}`} className="flex items-center gap-3 py-2.5 active:opacity-60">
+                      <AccountGlyph account={a} size={32} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[16px]">{a.name}</span>
+                        {data.inv.perAccount[a.id] ? <span className="block text-[13px] text-ink-soft">{t("Periode ini")} <Money value={data.inv.perAccount[a.id]} compact sign dots={3} /></span> : null}
+                      </span>
+                      <Money value={a.balance} className="flex-none text-[16px] font-semibold" dots={5} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[13px] text-ink-soft">{t("Setoran ke akun investasi dicatat sebagai Transfer, jadi tidak dihitung sebagai pengeluaran.")}</p>
+            </section>
+          )}
 
           {/* Tren */}
           <section className={`card p-5 ${view === "trend" ? "" : "hidden lg:block"}`}>

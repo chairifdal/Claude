@@ -27,6 +27,7 @@ function AccountForm({ account }) {
   const [initial, setInitial] = useState(account ? amountToInput(Math.abs(account.initial_balance)) : "");
   const [negative, setNegative] = useState(account ? account.initial_balance < 0 : false);
   const [limit, setLimit] = useState(account?.credit_limit ? amountToInput(account.credit_limit) : "");
+  const [dueDay, setDueDay] = useState(account?.due_day || "");
   const [include, setInclude] = useState(account ? account.include_in_totals !== false : true);
   const [goal, setGoal] = useState(account?.goal_amount ? amountToInput(account.goal_amount) : "");
   const [goalDate, setGoalDate] = useState(account?.goal_date || "");
@@ -43,6 +44,7 @@ function AccountForm({ account }) {
       name: name.trim(), kind, color,
       initial_balance: initialValue,
       credit_limit: isCredit ? parseAmount(limit) || null : null,
+      due_day: isCredit && dueDay ? Number(dueDay) : null,
       include_in_totals: include,
       goal_amount: !isCredit && parseAmount(goal) > 0 ? parseAmount(goal) : null,
       goal_date: !isCredit && parseAmount(goal) > 0 && goalDate ? goalDate : null,
@@ -128,11 +130,21 @@ function AccountForm({ account }) {
         </div>
       </div>
       {isCredit && (
-        <div>
-          <label htmlFor="acc-limit" className="label">{t("Limit kartu")}</label>
-          <AmountInput id="acc-limit" value={limit} onChange={setLimit} />
+        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+          <div>
+            <label htmlFor="acc-limit" className="label">{t("Limit kartu")}</label>
+            <AmountInput id="acc-limit" value={limit} onChange={setLimit} />
+          </div>
+          <div>
+            <label htmlFor="acc-due" className="label">{t("Jatuh tempo")}</label>
+            <select id="acc-due" className="field px-3" value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
+              <option value="">—</option>
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{t("Tgl {d}", { d })}</option>)}
+            </select>
+          </div>
         </div>
       )}
+      {isCredit && <p className="-mt-3 pl-1 text-[14px] text-ink-soft">{t("Selama masih ada tagihan, kartu ini muncul di \"Tagihan bulan ini\" di Beranda dengan tombol Bayar.")}</p>}
 
       <Switch id="acc-include" checked={include} onChange={setInclude} label={t("Masuk hitungan")}
         description={t("Kalau dimatikan, transaksi akun ini tidak dihitung di grafik pemasukan/pengeluaran dan anggaran, tetapi saldonya tetap masuk total aset. Cocok untuk dana darurat, titipan, atau rekening usaha.")} />
