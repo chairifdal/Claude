@@ -56,8 +56,16 @@ export function AppDataProvider({ children }) {
   }, []);
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (!user) {
+      // Gangguan jaringan bukan berarti sesi habis: jangan keluarkan pengguna
+      const expired = !authError || authError.name === "AuthSessionMissingError" || [401, 403].includes(authError.status);
+      if (!expired) { setLoading(false); return; }
+      // Sesi tidak valid / kedaluwarsa: bersihkan cookie lalu ke halaman masuk
+      await supabase.auth.signOut();
+      window.location.replace("/login");
+      return;
+    }
     userRef.current = user;
     setUser(user);
     const [acc, cats, profs, inv, bud, bil] = await Promise.all([
@@ -185,12 +193,21 @@ export function useApp() {
  * Ambil transaksi yang terlihat oleh user (RLS) dengan filter opsional.
  * Otomatis refetch saat ada perubahan realtime.
  */
+// Cache hasil per parameter: pindah halaman langsung menampilkan data terakhir, lalu diperbarui di belakang layar.
+const TX_CACHE = new Map();
+const TX_CACHE_MAX = 40;
+export function clearTransactionCache() { TX_CACHE.clear(); }
+
 export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
   const { supabase, version, user } = useApp();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
   const fromKey = from ? new Date(from).toISOString() : "";
   const toKey = to ? new Date(to).toISOString() : "";
+  const key = `${user?.id}|${accountId || ""}|${fromKey}|${toKey}|${limit}`;
+  const [state, setState] = useState(() => ({ key, rows: TX_CACHE.get(key) || [], loading: !TX_CACHE.has(key) }));
+
+  // Parameter berubah: pakai cache bila ada
+  const cached = TX_CACHE.get(key);
+  const current = state.key === key ? state : { key, rows: cached || [], loading: !cached };
 
   useEffect(() => {
     if (!user) return;
@@ -211,14 +228,17 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
         if (data.length < Math.min(PAGE, limit - offset)) break;
       }
       if (!cancelled) {
-        setRows(all.map((t) => ({ ...t, amount: Number(t.amount), fee: Number(t.fee) || 0 })));
-        setLoading(false);
+        const rows = all.map((t) => ({ ...t, amount: Number(t.amount), fee: Number(t.fee) || 0 }));
+        TX_CACHE.delete(key);
+        TX_CACHE.set(key, rows);
+        if (TX_CACHE.size > TX_CACHE_MAX) TX_CACHE.delete(TX_CACHE.keys().next().value);
+        setState({ key, rows, loading: false });
       }
     })();
     return () => { cancelled = true; };
-  }, [supabase, user, accountId, fromKey, toKey, limit, version]);
+  }, [supabase, user, accountId, fromKey, toKey, limit, version, key]);
 
-  return { rows, loading };
+  return { rows: current.rows, loading: current.loading };
 }
 
 /** Kategori gaji yang memicu periode: pilihan di profil, atau kategori pemasukan utama bernama "Gaji". */
