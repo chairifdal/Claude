@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Mail, Lock, User } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+
+  // Sudah punya sesi yang valid → langsung ke Beranda (middleware tidak lagi mengalihkan dari /login)
+  useEffect(() => {
+    getSupabase().auth.getSession().then(({ data }) => { if (data.session) router.replace("/"); });
+  }, [router]);
 
   async function submit(e) {
     e.preventDefault();

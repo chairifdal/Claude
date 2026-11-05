@@ -1,42 +1,23 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 const PUBLIC_PATHS = ["/login"];
+// Cookie sesi Supabase: sb-<ref>-auth-token (atau dipecah: .0, .1, ...)
+const AUTH_COOKIE = /^sb-.+-auth-token(\.\d+)?$/;
 
-export async function middleware(request) {
-  let response = NextResponse.next({ request });
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return response;
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll(); },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        },
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
+// Hanya memeriksa ada/tidaknya cookie sesi, tanpa panggilan jaringan ke Supabase Auth
+// (sebelumnya getUser() di tiap perpindahan halaman, termasuk prefetch). Keamanan data tetap
+// dijaga RLS di database; sesi yang kedaluwarsa ditangani di sisi client (lib/app-data.jsx).
+export function middleware(request) {
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p)) || path.startsWith("/auth");
-
-  if (!user && !isPublic) {
+  if (isPublic) return NextResponse.next();
+  const hasSession = request.cookies.getAll().some((c) => AUTH_COOKIE.test(c.name));
+  if (!hasSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
-  if (user && path === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {

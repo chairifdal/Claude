@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, Camera, Trash2, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
-import { useApp } from "@/lib/app-data";
+import { useApp, clearTransactionCache } from "@/lib/app-data";
 import { useTheme } from "@/lib/theme";
 import PeriodSettings from "@/components/PeriodSettings";
 import HomeWidgetSettings from "@/components/HomeWidgetSettings";
@@ -69,6 +69,7 @@ export default function SettingsPage() {
 
   async function logout() {
     await supabase.auth.signOut();
+    clearTransactionCache();
     router.replace("/login");
     router.refresh();
   }
