@@ -54,7 +54,7 @@ Warna dasar berupa CSS variable di `app/globals.css` (`:root` untuk terang, `.da
 ### 1. Supabase
 1. https://supabase.com → **New project** (region Singapore).
 2. **SQL Editor → New query** → paste seluruh isi `supabase/schema.sql` → **Run**. File ini aman dijalankan ulang.
-   Database yang sudah memakai versi awal cukup menjalankan `supabase/migrations/002_household.sql` lalu `003_fee_recurring.sql`, `004_periods_adjustments.sql` dan `005_card_due_home_widgets.sql` dan `006_avatar_photo.sql` `007_account_icon.sql` dan `008_invitable_users.sql` (berurutan; foto profil, ikon akun, dropdown pasangan).
+   Database yang sudah memakai versi awal cukup menjalankan `supabase/migrations/002_household.sql` lalu `003_fee_recurring.sql`, `004_periods_adjustments.sql` dan `005_card_due_home_widgets.sql` dan `006_avatar_photo.sql` `007_account_icon.sql`, `008_invitable_users.sql` dan `009_budget_period.sql` (berurutan; foto profil, ikon akun, dropdown pasangan).
 3. **Authentication → URL Configuration**: isi *Site URL* dengan URL Vercel kamu (mis. `https://kantong-kita.vercel.app`) dan tambahkan `https://kantong-kita.vercel.app/auth/callback` ke *Redirect URLs*.
 4. (Opsional) Kalau tidak ingin konfirmasi email: **Authentication → Providers → Email → matikan "Confirm email"**.
 5. **Project Settings → API**: salin *Project URL* dan *anon / publishable key*.
