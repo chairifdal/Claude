@@ -76,7 +76,7 @@ export default function CategoryDetail() {
 
   const delta = d.total - d.prevTotal;
   const worse = cat.kind === "expense" ? delta > 0 : delta < 0;
-  const budget = cat.kind === "expense" && period === "month" ? budgets.find((b) => b.category_id === root?.id) : null;
+  const budget = cat.kind === "expense" && period === "month" ? budgets.find((b) => b.category_id === root?.id && (b.period || "monthly") === "monthly") : null;
   const budgetSpent = budget && root?.id === id ? d.total : null;
   const yMax = niceMax(Math.max(...d.series.map((s) => s.total), d.avg, 0));
   const maxSub = d.subs[0]?.total || 1;

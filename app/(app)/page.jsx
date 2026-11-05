@@ -60,7 +60,7 @@ export default function HomePage() {
 
   const daysLeft = Math.max(1, daysBetween(new Date(), per.end));
   const finding = useMemo(() => {
-    const worst = budgets
+    const worst = budgets.filter((b) => (b.period || "monthly") === "monthly")
       .map((b) => ({ b, cat: categoryById[b.category_id], spent: m.roots.find((r) => r.id === b.category_id)?.total || 0 }))
       .filter((x) => x.cat).map((x) => ({ ...x, ratio: x.spent / x.b.amount })).sort((a, b) => b.ratio - a.ratio)[0];
     if (worst && worst.ratio >= 1) return { tone: "bad", text: t("{cat} lewat {amount} dari anggaran, {n} hari lagi", { cat: worst.cat.name, amount: hidden ? "" : formatIDR(worst.spent - worst.b.amount), n: daysLeft }) };
