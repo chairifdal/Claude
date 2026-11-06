@@ -1,17 +1,17 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
-import { parseAmount, amountToInput, formatIDR } from "@/lib/format";
+import { parseAmount, formatIDR } from "@/lib/format";
 import { CategoryIcon, Segmented } from "./ui";
 import AmountInput from "./AmountInput";
 
 /**
  * Catat cepat di Beranda: nominal → kategori yang paling sering dipakai → simpan.
- * Akun default = akun terakhir yang dipakai. "Ulangi" mengisi dari catatan yang sering berulang.
+ * Akun default = akun terakhir yang dipakai.
  */
 export default function QuickEntry() {
-  const { supabase, accounts, categories, categoryById, notify, refresh, t, canRecord, lastAccountId, rememberAccount, user, openTx } = useApp();
+  const { supabase, accounts, categories, notify, refresh, t, canRecord, lastAccountId, rememberAccount, user, openTx } = useApp();
   const since = useMemo(() => new Date(Date.now() - 60 * 86400000), []);
   const { rows } = useTransactions({ from: since, limit: 400 });
 
@@ -61,18 +61,6 @@ export default function QuickEntry() {
     setPage(n);
   }
 
-  // Catatan yang berulang: kategori + nominal yang sama ≥ 2 kali
-  const repeats = useMemo(() => {
-    const m = {};
-    for (const r of rows) {
-      if (r.type !== type || !r.category_id || r.created_by !== user?.id) continue;
-      const k = `${r.category_id}|${r.amount}`;
-      m[k] = m[k] || { categoryId: r.category_id, amount: r.amount, accountId: r.account_id, n: 0 };
-      m[k].n++;
-    }
-    return Object.values(m).filter((x) => x.n >= 2 && categoryById[x.categoryId]).sort((a, b) => b.n - a.n).slice(0, 3);
-  }, [rows, type, user, categoryById]);
-
   const value = parseAmount(amount);
 
   async function save() {
@@ -107,18 +95,6 @@ export default function QuickEntry() {
           {writable.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </div>
-
-      {repeats.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {repeats.map((r) => (
-            <button key={`${r.categoryId}${r.amount}`} type="button"
-              onClick={() => { setAmount(amountToInput(r.amount)); setCategoryId(r.categoryId); if (writable.some((a) => a.id === r.accountId)) setAccountId(r.accountId); }}
-              className="chip h-9 border border-transparent bg-fill text-ink">
-              <RotateCcw className="h-3.5 w-3.5 text-ink-soft" /> {categoryById[r.categoryId].name} {formatIDR(r.amount, { compact: true })}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="relative mt-4">
         <div ref={pagerRef} className="flex snap-x snap-mandatory overflow-x-auto no-scrollbar"
