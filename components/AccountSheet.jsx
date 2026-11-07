@@ -125,8 +125,10 @@ function AccountForm({ account }) {
       <div className="pointer-events-none mx-auto max-w-[340px]"><BankCard account={preview} /></div>
 
       <div>
-        <label htmlFor="acc-name" className="label">{t("Nama akun")}</label>
-        <input id="acc-name" className="field" placeholder={t("mis. BCA, Gopay, Dompet harian, Dana darurat")} value={name} onChange={(e) => setName(e.target.value)} />
+        <label htmlFor="wl-name" className="label">{t("Nama akun")}</label>
+        {/* Bukan kolom login: cegah iOS/password manager menawarkan isi otomatis (memicu Face ID) */}
+        <input id="wl-name" name="wallet-label" type="text" autoComplete="off" autoCapitalize="words" data-1p-ignore data-lpignore="true" data-form-type="other"
+          className="field" placeholder={t("mis. BCA, Gopay, Dompet harian, Dana darurat")} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
 
       <div>
@@ -198,7 +200,7 @@ function AccountForm({ account }) {
       </div>
 
       <div>
-        <label htmlFor="acc-initial" className="label">{isCredit ? t("Tagihan saat ini") : t("Saldo awal")}</label>
+        <label htmlFor="wl-initial" className="label">{isCredit ? t("Tagihan saat ini") : t("Saldo awal")}</label>
         <div className="flex gap-2">
           {!isCredit && (
             <button type="button" onClick={() => setNegative((n) => !n)} aria-label={negative ? t("Saldo minus") : t("Saldo plus")}
@@ -206,18 +208,18 @@ function AccountForm({ account }) {
               {negative ? "−" : "+"}
             </button>
           )}
-          <AmountInput id="acc-initial" value={initial} onChange={setInitial} className="flex-1" />
+          <AmountInput id="wl-initial" value={initial} onChange={setInitial} className="flex-1" />
         </div>
       </div>
       {isCredit && (
         <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
           <div>
-            <label htmlFor="acc-limit" className="label">{t("Limit kartu")}</label>
-            <AmountInput id="acc-limit" value={limit} onChange={setLimit} />
+            <label htmlFor="wl-limit" className="label">{t("Limit kartu")}</label>
+            <AmountInput id="wl-limit" value={limit} onChange={setLimit} />
           </div>
           <div>
-            <label htmlFor="acc-due" className="label">{t("Jatuh tempo")}</label>
-            <select id="acc-due" className="field px-3" value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
+            <label htmlFor="wl-due" className="label">{t("Jatuh tempo")}</label>
+            <select id="wl-due" className="field px-3" value={dueDay} onChange={(e) => setDueDay(e.target.value)}>
               <option value="">—</option>
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{t("Tgl {d}", { d })}</option>)}
             </select>
@@ -226,16 +228,23 @@ function AccountForm({ account }) {
       )}
       {isCredit && <p className="-mt-3 pl-1 text-[14px] text-ink-soft">{t("Selama masih ada tagihan, kartu ini muncul di \"Tagihan bulan ini\" di Beranda dengan tombol Bayar.")}</p>}
 
-      <Switch id="acc-include" checked={include} onChange={setInclude} label={t("Masuk hitungan")}
+      <Switch id="wl-include" checked={include} onChange={setInclude} label={t("Masuk hitungan")}
         description={t("Kalau dimatikan, transaksi akun ini tidak dihitung di grafik pemasukan/pengeluaran dan anggaran, tetapi saldonya tetap masuk total aset. Cocok untuk dana darurat, titipan, atau rekening usaha.")} />
 
       {!isCredit && (
         <div className="rounded-card bg-raised p-4">
           <p className="text-[16px] font-medium">{t("Target tabungan")} <span className="font-normal text-ink-soft">({t("opsional")})</span></p>
           <p className="mt-1 text-[14px] text-ink-soft">{t("Isi kalau akun ini untuk menabung, mis. dana darurat, liburan, atau DP rumah.")}</p>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_150px] gap-2">
-            <AmountInput id="acc-goal" aria-label={t("Target")} value={goal} onChange={setGoal} />
-            <input type="date" aria-label={t("Tanggal target")} className="field px-3" value={goalDate} onChange={(e) => setGoalDate(e.target.value)} />
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <label htmlFor="wl-goal" className="mb-1 block text-[13px] text-ink-soft">{t("Target")}</label>
+              <AmountInput id="wl-goal" value={goal} onChange={setGoal} />
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="wl-goal-date" className="mb-1 block text-[13px] text-ink-soft">{t("Tanggal target")}</label>
+              {/* iOS memberi input tanggal lebar minimum sendiri; appearance-none + min-w-0 menjaganya di dalam kotak */}
+              <input id="wl-goal-date" type="date" className="field block min-w-0 max-w-full appearance-none px-3 text-left" value={goalDate} onChange={(e) => setGoalDate(e.target.value)} />
+            </div>
           </div>
         </div>
       )}

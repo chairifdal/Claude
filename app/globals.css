@@ -53,3 +53,7 @@ input, select, textarea, button { font: inherit; letter-spacing: inherit; }
   .section-title { @apply text-[22px] font-bold tracking-tight text-ink; }
   .link { @apply text-[17px] font-normal text-brand-600; }
 }
+
+/* iOS Safari: input tanggal punya lebar minimum bawaan sehingga bisa keluar dari kotaknya */
+input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; }

@@ -23,19 +23,33 @@ export function statRows(rows) {
   return out;
 }
 
+// Salinan data terakhir di HP ini: aplikasi langsung tampil dengan data lama, lalu diperbarui
+// di belakang layar (tanpa kedip / layar kosong saat dibuka). Dihapus saat keluar akun.
+const SNAP_KEY = "kk-snap-v1";
+const TX_KEY = "kk-tx-v1";
+const canStore = () => typeof window !== "undefined";
+function readSnap() {
+  if (!canStore()) return null;
+  try { return JSON.parse(localStorage.getItem(SNAP_KEY) || "null"); } catch { return null; }
+}
+function writeSnap(snap) {
+  try { localStorage.setItem(SNAP_KEY, JSON.stringify(snap)); } catch {}
+}
+
 export function AppDataProvider({ children }) {
   const supabase = getSupabase();
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [accounts, setAccounts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [people, setPeople] = useState({});
+  const [snap] = useState(readSnap);
+  const [user, setUser] = useState(() => snap?.user || null);
+  const [profile, setProfile] = useState(() => (snap ? snap.people[snap.user.id] || null : null));
+  const [accounts, setAccounts] = useState(() => snap?.accounts || []);
+  const [categories, setCategories] = useState(() => snap?.categories || []);
+  const [people, setPeople] = useState(() => snap?.people || {});
   const [invites, setInvites] = useState([]);
-  const [budgets, setBudgets] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [salaryDates, setSalaryDates] = useState([]);
+  const [budgets, setBudgets] = useState(() => snap?.budgets || []);
+  const [bills, setBills] = useState(() => snap?.bills || []);
+  const [salaryDates, setSalaryDates] = useState(() => (snap?.salaryDates || []).map((d) => new Date(d)));
   const { locale, setLocale, t } = useI18n();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !snap);
   const [version, setVersion] = useState(0);
   const [hidden, setHidden] = useState(false);
   const [txSheet, setTxSheet] = useState(null);       // { type, accountId, toAccountId, tx }
@@ -61,7 +75,8 @@ export function AppDataProvider({ children }) {
       // Gangguan jaringan bukan berarti sesi habis: jangan keluarkan pengguna
       const expired = !authError || authError.name === "AuthSessionMissingError" || [401, 403].includes(authError.status);
       if (!expired) { setLoading(false); return; }
-      // Sesi tidak valid / kedaluwarsa: bersihkan cookie lalu ke halaman masuk
+      // Sesi tidak valid / kedaluwarsa: bersihkan cookie & salinan lokal lalu ke halaman masuk
+      clearTransactionCache();
       await supabase.auth.signOut();
       window.location.replace("/login");
       return;
@@ -76,7 +91,8 @@ export function AppDataProvider({ children }) {
       supabase.from("budgets").select("*"),
       supabase.from("bills").select("*").eq("active", true).order("due_day"),
     ]);
-    setAccounts((acc.data || []).map((a) => ({ ...a, balance: Number(a.balance), initial_balance: Number(a.initial_balance) })));
+    const accList = (acc.data || []).map((a) => ({ ...a, balance: Number(a.balance), initial_balance: Number(a.initial_balance) }));
+    setAccounts(accList);
     setCategories(cats.data || []);
     const map = {};
     (profs.data || []).forEach((p) => { map[p.id] = p; });
@@ -90,6 +106,7 @@ export function AppDataProvider({ children }) {
     let saved = null;
     try { saved = localStorage.getItem("kk-locale"); } catch {}
     if (mine?.locale && !saved) setLocale(mine.locale);
+    let salDates = [];
     // Periode gajian: tanggal-tanggal pemasukan di kategori gaji milik saya (beserta sub-kategorinya)
     if (mine?.period_mode === "salary") {
       const cats_ = cats.data || [];
@@ -98,10 +115,16 @@ export function AppDataProvider({ children }) {
       if (ids.length) {
         const { data: sal } = await supabase.from("transactions").select("occurred_at")
           .eq("type", "income").in("category_id", ids).order("occurred_at", { ascending: false }).limit(120);
-        setSalaryDates((sal || []).map((r) => new Date(r.occurred_at)));
-      } else setSalaryDates([]);
-    } else setSalaryDates([]);
+        salDates = (sal || []).map((r) => new Date(r.occurred_at));
+      }
+    }
+    setSalaryDates(salDates);
     setLoading(false);
+    writeSnap({
+      user: { id: user.id, email: user.email }, people: map, accounts: accList, categories: cats.data || [],
+      budgets: (bud.data || []).map((b) => ({ ...b, amount: Number(b.amount) })), bills: (bil.data || []).map((b) => ({ ...b, amount: Number(b.amount) })),
+      salaryDates: salDates.map((d) => d.toISOString()),
+    });
     // Cadangan untuk jadwal harian di server: catat transaksi berulang yang sudah jatuh tempo
     if (!ranRecurring.current) {
       ranRecurring.current = true;
@@ -196,7 +219,25 @@ export function useApp() {
 // Cache hasil per parameter: pindah halaman langsung menampilkan data terakhir, lalu diperbarui di belakang layar.
 const TX_CACHE = new Map();
 const TX_CACHE_MAX = 40;
-export function clearTransactionCache() { TX_CACHE.clear(); }
+const TX_PERSIST = 8;          // entri terakhir yang disimpan di HP
+const TX_PERSIST_ROWS = 2500;  // entri yang terlalu besar tidak disimpan
+if (canStore()) {
+  try { for (const [k, rows] of JSON.parse(localStorage.getItem(TX_KEY) || "[]")) TX_CACHE.set(k, rows); } catch {}
+}
+let persistTimer = null;
+function persistTx() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    const entries = [...TX_CACHE.entries()].filter(([, r]) => r.length <= TX_PERSIST_ROWS).slice(-TX_PERSIST);
+    try { localStorage.setItem(TX_KEY, JSON.stringify(entries)); } catch {
+      try { localStorage.setItem(TX_KEY, JSON.stringify(entries.slice(-3))); } catch {}
+    }
+  }, 400);
+}
+export function clearTransactionCache() {
+  TX_CACHE.clear();
+  if (canStore()) { try { localStorage.removeItem(TX_KEY); localStorage.removeItem(SNAP_KEY); } catch {} }
+}
 
 export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
   const { supabase, version, user } = useApp();
@@ -232,6 +273,7 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
         TX_CACHE.delete(key);
         TX_CACHE.set(key, rows);
         if (TX_CACHE.size > TX_CACHE_MAX) TX_CACHE.delete(TX_CACHE.keys().next().value);
+        persistTx();
         setState({ key, rows, loading: false });
       }
     })();

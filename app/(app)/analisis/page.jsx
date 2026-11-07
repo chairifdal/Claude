@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, PieChart, Pie } from "recharts";
-import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
@@ -15,6 +15,9 @@ import MoneyFlow, { buildFlow } from "@/components/MoneyFlow";
 const today = () => toISODate(new Date());
 const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); return toISODate(d); };
 const GOOD = "#34C759", WARN = "#FF9500", BAD = "#FF3B30";
+const CHARITY = "#00A884";
+// Kategori ibadah harta: dikenali dari nama kategori (atau kategori induknya)
+const CHARITY_RE = /infa[qk]|s[h]?[ao]d[ae]q[ao]?h|sedeka[hk]|zaka[th]|wakaf|donasi|amal\b/i;
 
 function loadState() {
   try {
@@ -26,7 +29,7 @@ function loadState() {
 
 export default function AnalysisPage() {
   const C = chartColors(useTheme().isDark);
-  const { categoryById, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById } = useApp();
+  const { categoryById, categories, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
@@ -107,8 +110,25 @@ export default function AnalysisPage() {
       }
     }
 
+    // Infaq & sedekah (termasuk zakat, wakaf, donasi): pengeluaran di kategori yang namanya cocok
+    const isCharity = (r) => {
+      const cat = categoryById[r.category_id];
+      return !!cat && (CHARITY_RE.test(cat.name) || CHARITY_RE.test(rootCategory(cat, categoryById)?.name || ""));
+    };
+    const charityRows = cur.expense.filter(isCharity);
+    let charityBefore = 0;
+    for (const r of all) {
+      if (r.type !== "expense" || !isCharity(r)) continue;
+      const ts = new Date(r.occurred_at).getTime();
+      if (ts < t0 && ts >= prev.start.getTime() && ts < prevCut) charityBefore += r.amount;
+    }
+    const charity = {
+      total: sum(charityRows), before: charityBefore, groups: groupsOf(charityRows, "sub"),
+      top: charityRows.filter((r) => !r.isFee).sort((a, b) => b.amount - a.amount).slice(0, 5),
+    };
+
     return {
-      income, expense, before, ongoing, inv,
+      income, expense, before, ongoing, inv, charity,
       total: kind === "expense" ? expense : income,
       prevTotal: before[kind],
       groups: groupsOf(cur[kind], group),
@@ -143,6 +163,11 @@ export default function AnalysisPage() {
   const rateStatus = saveRate === null ? { label: t("Belum ada pemasukan"), color: "#8E8E93" }
     : saveRate >= 0.2 ? { label: t("Kuat"), color: GOOD } : saveRate >= 0 ? { label: t("Cukup"), color: WARN } : { label: t("Defisit"), color: BAD };
   const showPeople = who === "all" && persons.length > 2;
+  const invNet = data.inv.in - data.inv.out;
+  const invRate = data.income > 0 ? invNet / data.income : null;
+  const hasCharityCats = categories.some((c) => c.kind === "expense" && CHARITY_RE.test(c.name));
+  const charityRate = data.income > 0 ? data.charity.total / data.income : null;
+  const pctText = (r) => (r === null ? "—" : `${Math.round(r * 1000) / 10}`.replace(".", ","));
 
   return (
     <div>
@@ -183,10 +208,18 @@ export default function AnalysisPage() {
 
         {invAccounts.length > 0 && (
           <Tile icon={TrendingUp} title={t("Investasi")} color={INV_COLOR} onClick={() => setDetail("invest")}
-            value={<Money value={portfolio} compact dots={4} />}
-            status={data.inv.in - data.inv.out ? <>{t("Bersih")} <Money value={data.inv.in - data.inv.out} compact sign dots={3} /></> : t("Tidak ada setoran")}
-            statusColor={data.inv.in - data.inv.out >= 0 ? INV_COLOR : BAD}>
-            <InOutBars a={data.inv.in} b={data.inv.out} colors={[INV_COLOR, WARN]} />
+            value={invRate === null ? "—" : <>{pctText(invRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
+            status={invNet ? <>{invNet > 0 ? t("Disetor") : t("Ditarik")} <Money value={Math.abs(invNet)} compact dots={3} /></> : t("Tidak ada setoran")}
+            statusColor={invNet >= 0 ? INV_COLOR : BAD}>
+            <RateBar rate={invRate} color={INV_COLOR} label={t("dari pemasukan")} />
+          </Tile>
+        )}
+
+        {hasCharityCats && (
+          <Tile icon={HandHeart} title={t("Infaq & Sedekah")} color={CHARITY} onClick={() => setDetail("charity")}
+            value={charityRate === null ? "—" : <>{pctText(charityRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
+            status={<Money value={data.charity.total} compact dots={4} />}>
+            <RateBar rate={charityRate} color={CHARITY} label={t("dari pemasukan")} max={0.2} />
           </Tile>
         )}
 
@@ -325,6 +358,14 @@ export default function AnalysisPage() {
       <Sheet open={detail === "invest"} onClose={() => setDetail(null)} title={t("Investasi")} full>
         <div className="space-y-4 pb-6">
           <section className="card p-5">
+            <p className="text-[15px] text-ink-soft">{t("Bagian pemasukan yang diinvestasikan")}</p>
+            <p className="text-[34px] font-bold leading-tight tracking-tight" style={{ color: INV_COLOR }}>{invRate === null ? "—" : `${pctText(invRate)}%`}</p>
+            <p className="mt-1 text-[14px] text-ink-soft">
+              {t("Setoran bersih {inv} dari pemasukan {inc} di {period}.", { inv: hidden ? "Rp •••" : formatIDR(invNet, { compact: true }), inc: hidden ? "Rp •••" : formatIDR(data.income, { compact: true }), period: periodLabel(period, anchor, ctx) })}
+            </p>
+            <div className="mt-3"><RateBar rate={invRate} color={INV_COLOR} label={t("dari pemasukan")} /></div>
+          </section>
+          <section className="card p-5">
             <p className="text-[15px] text-ink-soft">{t("Portofolio")}</p>
             <Money value={portfolio} className="block text-[34px] font-bold leading-tight tracking-tight" />
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -332,11 +373,6 @@ export default function AnalysisPage() {
               <Flow label={t("Ditarik")} value={data.inv.out} color={WARN} />
               <Flow label={t("Bersih")} value={data.inv.in - data.inv.out} color={data.inv.in - data.inv.out >= 0 ? "#5856D6" : BAD} sign />
             </div>
-            {data.income > 0 && data.inv.in - data.inv.out > 0 && (
-              <p className="mt-3 text-[14px] text-ink-soft">
-                {t("{pct}% dari pemasukan periode ini diinvestasikan.", { pct: Math.round(((data.inv.in - data.inv.out) / data.income) * 100) })}
-              </p>
-            )}
             {data.inv.change !== 0 && (
               <p className="mt-1 text-[14px] text-ink-soft">
                 {t("Perubahan nilai (dari Sesuaikan saldo)")}: <Money value={data.inv.change} sign className={`font-semibold ${data.inv.change >= 0 ? "text-income" : "text-expense"}`} dots={4} />
@@ -358,6 +394,31 @@ export default function AnalysisPage() {
             </ul>
           </section>
           <Explain title={t("Investasi")} text={t("Setoran ke akun investasi dicatat sebagai Transfer, jadi tidak dihitung sebagai pengeluaran.")} />
+        </div>
+      </Sheet>
+
+      <Sheet open={detail === "charity"} onClose={() => setDetail(null)} title={t("Infaq & Sedekah")} full>
+        <div className="space-y-4 pb-6">
+          <section className="card p-5">
+            <p className="text-[15px] text-ink-soft">{t("Total di {period}", { period: periodLabel(period, anchor, ctx) })}</p>
+            <Money value={data.charity.total} className="block text-[34px] font-bold leading-tight tracking-tight" />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-[14px] p-3" style={{ background: `${CHARITY}17` }}>
+                <p className="text-[13px] font-semibold" style={{ color: CHARITY }}>{t("Dari pemasukan")}</p>
+                <p className="text-[17px] font-bold">{charityRate === null ? "—" : `${pctText(charityRate)}%`}</p>
+              </div>
+              <Delta cur={data.charity.total} prev={data.charity.before} kind="income" label={t("vs {period}", { period: prevWord })} hidden={hidden} />
+            </div>
+            {data.charity.groups.length > 0 && <CategoryList groups={data.charity.groups} total={data.charity.total} qs={qs} />}
+          </section>
+          {data.charity.top.length > 0 && (
+            <section>
+              <h2 className="section-title mb-2 px-1">{t("Catatan terbesar")}</h2>
+              <div className="card p-1">{data.charity.top.map((tx) => <TxRow key={tx.id} tx={tx} />)}</div>
+            </section>
+          )}
+          <Explain title={t("Apa yang dihitung?")}
+            text={t("Pengeluaran di kategori yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal (termasuk sub-kategorinya). Persentase dihitung dari total pemasukan di periode yang sama.")} />
         </div>
       </Sheet>
 
@@ -514,16 +575,15 @@ function FlowBars({ income, roots, spent }) {
   );
 }
 
-function InOutBars({ a, b, colors }) {
-  const max = Math.max(a, b, 1);
+/** Batang persentase terhadap pemasukan; `max` = nilai yang memenuhi batang */
+function RateBar({ rate, color, label, max = 0.5 }) {
+  const w = rate === null ? 0 : Math.max(0, Math.min(1, rate / max));
   return (
-    <span className="block space-y-2 pt-2">
-      {[[ArrowDown, a, colors[0]], [ArrowUp, b, colors[1]]].map(([I, v, c], i) => (
-        <span key={i} className="flex items-center gap-2">
-          <I className="h-3.5 w-3.5 flex-none text-ink-soft" />
-          <span className="block h-4 flex-1"><span className="block h-full rounded-[5px]" style={{ width: `${Math.max(2, (v / max) * 100)}%`, background: c, opacity: v ? 1 : 0.25 }} /></span>
-        </span>
-      ))}
+    <span className="block pt-3">
+      <span className="block h-3 overflow-hidden rounded-full bg-rule">
+        <span className="block h-full rounded-full" style={{ width: `${w * 100}%`, background: color }} />
+      </span>
+      <span className="mt-1.5 flex justify-between text-[11px] text-ink-soft"><span>0%</span><span className="truncate px-1">{label}</span><span>{Math.round(max * 100)}%</span></span>
     </span>
   );
 }
