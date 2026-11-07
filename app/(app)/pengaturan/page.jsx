@@ -2,7 +2,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, Camera, Trash2, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon } from "lucide-react";
+import { Shapes, LogOut, ChevronRight, MailOpen, Check, X, Camera, Trash2, ReceiptText, Smartphone, CalendarClock, Languages, Repeat, Moon, Target } from "lucide-react";
 import { useApp, clearTransactionCache } from "@/lib/app-data";
 import { useTheme } from "@/lib/theme";
 import PeriodSettings from "@/components/PeriodSettings";
@@ -158,6 +158,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-1">
+          <Row href="/anggaran" icon={Target} label={t("Anggaran")} color="#0A84FF" />
           <Row href="/kategori" icon={Shapes} label={t("Kategori & sub-kategori")} color="#FF9500" />
           <Row href="/tagihan" icon={CalendarClock} label={t("Tagihan rutin")} color="#FF3B30" />
           <Row href="/berulang" icon={Repeat} label={t("Transaksi berulang")} color="#34C759" />

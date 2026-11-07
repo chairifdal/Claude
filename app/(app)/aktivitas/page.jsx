@@ -112,7 +112,7 @@ export default function ActivityPage() {
 
   return (
     <div>
-      <PageHeader title={t("Aktivitas")} back="/"
+      <PageHeader title={t("Aktivitas")}
         right={<>
           <button className={iconBtn} onClick={() => setSearchOpen((o) => !o)} aria-label={t("Cari")} aria-expanded={searchOpen}><Search className="h-[18px] w-[18px]" /></button>
           <button className={iconBtn} onClick={() => setSheet(true)} aria-label={t("Filter")}>

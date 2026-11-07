@@ -3,12 +3,12 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Archive, Trash2, Upload, X, Search } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { ACCOUNT_COLORS, ACCOUNT_KINDS } from "@/lib/constants";
+import { ACCOUNT_COLORS, ACCOUNT_KINDS, INSTRUMENTS } from "@/lib/constants";
 import { amountToInput, parseAmount } from "@/lib/format";
-import { Sheet, Switch, BrandTile } from "./ui";
+import { Sheet, Switch, BrandTile, Segmented } from "./ui";
 import { BRANDS, BRAND_GROUPS } from "@/lib/brands";
 import { BankCard } from "./BankCard";
-import AmountInput from "./AmountInput";
+import AmountInput, { GramInput, parseGram, gramToInput } from "./AmountInput";
 
 export default function AccountSheet() {
   const { accountSheet, closeAccount, t } = useApp();
@@ -27,6 +27,10 @@ function AccountForm({ account }) {
   const [color, setColor] = useState(account?.color || ACCOUNT_COLORS[0]);
   const [initial, setInitial] = useState(account ? amountToInput(Math.abs(account.initial_balance)) : "");
   const [negative, setNegative] = useState(account ? account.initial_balance < 0 : false);
+  const [instrument, setInstrument] = useState(account?.instrument || "");
+  const [unit, setUnit] = useState(account?.unit || "money");
+  const [initialQty, setInitialQty] = useState(gramToInput(account?.initial_qty));
+  const [unitPrice, setUnitPrice] = useState(account?.unit_price ? amountToInput(account.unit_price) : "");
   const [limit, setLimit] = useState(account?.credit_limit ? amountToInput(account.credit_limit) : "");
   const [dueDay, setDueDay] = useState(account?.due_day || "");
   const [include, setInclude] = useState(account ? account.include_in_totals !== false : true);
@@ -42,6 +46,8 @@ function AccountForm({ account }) {
   const [confirm, setConfirm] = useState(false);
 
   const isCredit = kind === "credit";
+  const isInvest = kind === "investment";
+  const gram = isInvest && instrument === "gold" && unit === "gram";
 
   function pickBrand(b) {
     setIcon(`brand:${b.id}`);
@@ -76,7 +82,8 @@ function AccountForm({ account }) {
   }
 
   const shownBrands = BRANDS.filter((b) => (brandQuery.trim() ? b.name.toLowerCase().includes(brandQuery.trim().toLowerCase()) : b.group === brandGroup));
-  const initialValue = parseAmount(initial) * (negative || isCredit ? -1 : 1);
+  // Emas dalam gram: saldo awal Rupiah (modal) = gram awal × harga per gram
+  const initialValue = gram ? Math.round(parseGram(initialQty) * parseAmount(unitPrice)) : parseAmount(initial) * (negative || isCredit ? -1 : 1);
 
   async function save() {
     if (!name.trim()) return;
@@ -89,12 +96,22 @@ function AccountForm({ account }) {
       include_in_totals: include,
       goal_amount: !isCredit && parseAmount(goal) > 0 ? parseAmount(goal) : null,
       goal_date: !isCredit && parseAmount(goal) > 0 && goalDate ? goalDate : null,
+      // Kolom instrumen (migrasi 010) hanya dikirim bila dipakai, supaya akun lain tetap bisa disimpan sebelum migrasi
+      ...(isInvest || account?.instrument ? {
+        instrument: isInvest ? instrument || null : null,
+        unit: gram ? "gram" : "money",
+        unit_price: gram && parseAmount(unitPrice) > 0 ? parseAmount(unitPrice) : null,
+        initial_qty: gram ? parseGram(initialQty) : 0,
+      } : {}),
     };
     const { error } = account
       ? await supabase.from("accounts").update(payload).eq("id", account.id)
       : await supabase.from("accounts").insert({ ...payload, owner_id: user.id });
     setBusy(false);
-    if (error) return notify(error.message, "err");
+    if (error) {
+      const missing = /instrument|unit_price|initial_qty|column/i.test(error.message);
+      return notify(missing ? t("Jalankan migrasi database 010 dulu untuk menyimpan instrumen investasi.") : error.message, "err");
+    }
     notify(account ? t("Akun diperbarui") : t("Akun dibuat"));
     refresh();
     closeAccount();
@@ -118,7 +135,7 @@ function AccountForm({ account }) {
     refresh(); closeAccount(); router.push("/dompet");
   }
 
-  const preview = { name: name || t("Nama akun"), kind, color, icon, balance: initialValue, credit_limit: parseAmount(limit), my_role: "owner", owner_id: user?.id, member_count: account?.member_count || 0 };
+  const preview = { name: name || t("Nama akun"), kind, color, icon, balance: initialValue, instrument, unit: gram ? "gram" : "money", qty_balance: parseGram(initialQty), unit_price: parseAmount(unitPrice), credit_limit: parseAmount(limit), my_role: "owner", owner_id: user?.id, member_count: account?.member_count || 0 };
 
   return (
     <div className="space-y-6 pb-6">
@@ -146,6 +163,32 @@ function AccountForm({ account }) {
           })}
         </div>
       </div>
+
+      {isInvest && (
+        <div>
+          <p className="label">{t("Instrumen")}</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(INSTRUMENTS).map(([k, v]) => {
+              const Icon = v.icon;
+              const active = instrument === k;
+              return (
+                <button key={k} type="button" aria-pressed={active} onClick={() => setInstrument(active ? "" : k)}
+                  className={`chip h-10 border ${active ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>
+                  <Icon className="h-4 w-4" /> {t(v.label)}
+                </button>
+              );
+            })}
+          </div>
+          {instrument === "gold" && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-[13px] text-ink-soft">{t("Catat emas dalam")}</p>
+              <Segmented value={unit} onChange={setUnit} className="w-full"
+                options={[{ value: "money", label: t("Rupiah") }, { value: "gram", label: t("Gram") }]} />
+              {unit === "gram" && <p className="mt-2 text-[13px] leading-snug text-ink-soft">{t("Saat setor atau beli, isi juga berapa gram yang didapat. Nilai akun = total gram × harga per gram di bawah.")}</p>}
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <p className="label">{t("Warna kartu")}</p>
@@ -199,6 +242,19 @@ function AccountForm({ account }) {
         )}
       </div>
 
+      {gram ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <label htmlFor="wl-qty" className="label">{t("Saldo awal (gram)")}</label>
+            <GramInput id="wl-qty" value={initialQty} onChange={setInitialQty} />
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="wl-price" className="label">{t("Harga per gram")}</label>
+            <AmountInput id="wl-price" value={unitPrice} onChange={setUnitPrice} />
+          </div>
+          <p className="col-span-2 -mt-1 pl-1 text-[13px] text-ink-soft">{t("Perbarui harga per gram kapan saja supaya nilai emasmu mengikuti harga terkini.")}</p>
+        </div>
+      ) : (
       <div>
         <label htmlFor="wl-initial" className="label">{isCredit ? t("Tagihan saat ini") : t("Saldo awal")}</label>
         <div className="flex gap-2">
@@ -211,6 +267,7 @@ function AccountForm({ account }) {
           <AmountInput id="wl-initial" value={initial} onChange={setInitial} className="flex-1" />
         </div>
       </div>
+      )}
       {isCredit && (
         <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
           <div>

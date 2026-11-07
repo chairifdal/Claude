@@ -91,7 +91,15 @@ export function AppDataProvider({ children }) {
       supabase.from("budgets").select("*"),
       supabase.from("bills").select("*").eq("active", true).order("due_day"),
     ]);
-    const accList = (acc.data || []).map((a) => ({ ...a, balance: Number(a.balance), initial_balance: Number(a.initial_balance) }));
+    const accList = (acc.data || []).map((a) => {
+      const x = { ...a, balance: Number(a.balance), initial_balance: Number(a.initial_balance), qty_balance: Number(a.qty_balance) || 0 };
+      // Emas dalam gram: saldo = gram × harga per gram terkini (bila diisi); modal tetap tersimpan di cost_balance
+      if (x.kind === "investment" && x.unit === "gram" && Number(x.unit_price) > 0) {
+        x.cost_balance = x.balance;
+        x.balance = Math.round(x.qty_balance * Number(x.unit_price));
+      }
+      return x;
+    });
     setAccounts(accList);
     setCategories(cats.data || []);
     const map = {};

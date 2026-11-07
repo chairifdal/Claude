@@ -7,6 +7,7 @@ import { Switch } from "./ui";
 export const HOME_WIDGETS = [
   { key: "insight", label: "Insight" },
   { key: "quick", label: "Catat cepat" },
+  { key: "budget", label: "Anggaran" },
   { key: "bills", label: "Tagihan bulan ini" },
   { key: "couple", label: "Kita bulan ini" },
   { key: "spending", label: "Ke mana uangnya" },

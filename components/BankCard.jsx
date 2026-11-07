@@ -1,14 +1,14 @@
 "use client";
 import { Users, Nfc } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { ACCOUNT_KINDS, ROLE_LABEL } from "@/lib/constants";
-import { firstName } from "@/lib/format";
+import { ACCOUNT_KINDS, ROLE_LABEL, INSTRUMENTS, isGram } from "@/lib/constants";
+import { firstName, formatGram, formatIDR } from "@/lib/format";
 import { Money, shade, BrandTile } from "./ui";
 import { parseIcon } from "@/lib/brands";
 
 /** Kartu ala Apple Wallet: gradien warna akun, lingkaran halus, chip emas. */
 export function BankCard({ account, className = "", concealed = false }) {
-  const { people, user, t } = useApp();
+  const { people, user, t, hidden } = useApp();
   const kind = ACCOUNT_KINDS[account.kind] || ACCOUNT_KINDS.bank;
   const Icon = kind.icon;
   const c = account.color || "#06B6D4";
@@ -33,7 +33,7 @@ export function BankCard({ account, className = "", concealed = false }) {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[19px] font-bold tracking-tight">{account.name}</p>
             <p className="truncate text-[13px] font-medium text-white/75">
-              {t(kind.label)}{account.include_in_totals === false ? ` · ${t("tidak dihitung")}` : ""}
+              {t(kind.label)}{INSTRUMENTS[account.instrument] ? ` · ${t(INSTRUMENTS[account.instrument].label)}` : ""}{account.include_in_totals === false ? ` · ${t("tidak dihitung")}` : ""}
             </p>
           </div>
           {shared ? (
@@ -67,6 +67,11 @@ export function BankCard({ account, className = "", concealed = false }) {
               <div className="mb-3 h-7 w-10 rounded-[6px] bg-gradient-to-br from-[#F7E3A1] to-[#C9A13B] shadow-inner" aria-hidden="true" />
               <p className="text-[13px] font-medium text-white/75">{t("Saldo")}</p>
               <Money value={account.balance} className="block text-[30px] font-bold leading-tight tracking-tight" />
+              {isGram(account) && (
+                <p className="text-[14px] font-medium text-white/85">
+                  {formatGram(account.qty_balance)}{Number(account.unit_price) > 0 ? ` × ${hidden ? "Rp •••" : formatIDR(account.unit_price, { compact: true })}/gr` : ` · ${t("isi harga per gram")}`}
+                </p>
+              )}
             </>
           )}
         </div>

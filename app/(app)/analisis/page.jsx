@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, PieChart, Pie } from "recharts";
-import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart, Target } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
+import { INSTRUMENTS } from "@/lib/constants";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented, AccountGlyph, Sheet } from "@/components/ui";
@@ -29,12 +31,13 @@ function loadState() {
 
 export default function AnalysisPage() {
   const C = chartColors(useTheme().isDark);
-  const { categoryById, categories, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById } = useApp();
+  const { categoryById, categories, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById, budgets } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
   const { period, anchor, kind, who, group, range } = st;
   const [detail, setDetail] = useState(null);
+  const router = useRouter();
   const [flowMode, setFlowMode] = useState("rp");
 
   // Periode "Bulan" mengikuti siklus orang yang dipilih: saya → siklus saya; lainnya → bulan kalender
@@ -149,6 +152,14 @@ export default function AnalysisPage() {
   const saveRate = data.income > 0 ? saved / data.income : null;
   const invAccounts = accounts.filter((a) => a.kind === "investment" && (who === "all" || a.owner_id === who || who === user?.id));
   const portfolio = invAccounts.reduce((s, a) => s + a.balance, 0);
+  // Alokasi portofolio per instrumen (Emas, Reksadana, Saham, SBN, …)
+  const allocation = Object.values(invAccounts.reduce((m, a) => {
+    const k = INSTRUMENTS[a.instrument] ? a.instrument : "_none";
+    const meta = INSTRUMENTS[k] || { label: "Belum dipilih", color: "#C7C7CC" };
+    m[k] = m[k] || { key: k, label: meta.label, color: meta.color, value: 0 };
+    m[k].value += Math.max(0, a.balance);
+    return m;
+  }, {})).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
   const persons = [{ value: "all", label: t("Semua") }, ...Object.values(people).sort((a, b) => (a.id === user?.id ? -1 : b.id === user?.id ? 1 : 0))
     .map((p) => ({ value: p.id, label: p.id === user?.id ? t("Saya") : firstName(p) }))];
   const qs = `p=${period}&d=${toISODate(anchor)}&w=${who}${period === "range" ? `&f=${range.from}&t=${range.to}` : ""}`;
@@ -167,6 +178,11 @@ export default function AnalysisPage() {
   const invRate = data.income > 0 ? invNet / data.income : null;
   const hasCharityCats = categories.some((c) => c.kind === "expense" && CHARITY_RE.test(c.name));
   const charityRate = data.income > 0 ? data.charity.total / data.income : null;
+  // Anggaran bulanan vs pengeluaran (hanya bermakna saat periode = bulan)
+  const monthlyBudgets = budgets.filter((b) => (b.period || "monthly") === "monthly" && categoryById[b.category_id]);
+  const budgetTotal = monthlyBudgets.reduce((s, b) => s + b.amount, 0);
+  const budgetSpent = monthlyBudgets.reduce((s, b) => s + (data.expenseRoots.find((g) => g.id === b.category_id)?.total || 0), 0);
+  const budgetRate = period === "month" && budgetTotal ? budgetSpent / budgetTotal : null;
   const pctText = (r) => (r === null ? "—" : `${Math.round(r * 1000) / 10}`.replace(".", ","));
 
   return (
@@ -222,6 +238,13 @@ export default function AnalysisPage() {
             <RateBar rate={charityRate} color={CHARITY} label={t("dari pemasukan")} max={0.2} />
           </Tile>
         )}
+
+        <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => router.push("/anggaran")}
+          value={budgetRate === null ? "—" : <>{Math.round(budgetRate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
+          status={!budgetTotal ? t("Atur anggaran") : budgetRate === null ? t("Pilih periode Bulan") : budgetRate > 1 ? t("Lewat anggaran") : t("terpakai")}
+          statusColor={budgetRate === null ? "#8E8E93" : budgetRate > 1 ? BAD : budgetRate >= 0.8 ? WARN : GOOD}>
+          <RateBar rate={budgetRate} color={budgetRate !== null && budgetRate > 1 ? BAD : "#0A84FF"} label={t("dari anggaran")} max={1} />
+        </Tile>
 
         {showPeople && (
           <Tile icon={Users} title={t("Per orang")} color="#FF9F0A" onClick={() => setDetail("people")}
@@ -377,6 +400,23 @@ export default function AnalysisPage() {
               <p className="mt-1 text-[14px] text-ink-soft">
                 {t("Perubahan nilai (dari Sesuaikan saldo)")}: <Money value={data.inv.change} sign className={`font-semibold ${data.inv.change >= 0 ? "text-income" : "text-expense"}`} dots={4} />
               </p>
+            )}
+            {allocation.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[13px] font-semibold uppercase tracking-wide text-ink-soft">{t("Alokasi per instrumen")}</p>
+                <div className="mt-2 flex h-3 gap-0.5 overflow-hidden rounded-full">
+                  {allocation.map((x) => <div key={x.key} style={{ flex: x.value, background: x.color }} />)}
+                </div>
+                <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                  {allocation.map((x) => (
+                    <li key={x.key} className="flex items-center gap-1.5 text-[14px]">
+                      <i className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: x.color }} />
+                      <span className="min-w-0 flex-1 truncate">{t(x.label)}</span>
+                      <span className="tabular text-ink-soft">{Math.round((x.value / (portfolio || 1)) * 100)}%</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             <ul className="mt-3 divide-y divide-line">
               {invAccounts.map((a) => (

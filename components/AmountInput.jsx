@@ -23,3 +23,22 @@ export default function AmountInput({ id, value, onChange, autoFocus, large = fa
     </div>
   );
 }
+
+/** Ubah teks gram ("12,5" atau "12.5") jadi angka */
+export const parseGram = (text) => {
+  const n = Number(String(text || "").replace(",", ".").replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+export const gramToInput = (n) => (n ? String(Number(n)).replace(".", ",") : "");
+
+/** Input berat (gram), boleh desimal dengan koma. */
+export function GramInput({ id, value, onChange, className = "", ...rest }) {
+  return (
+    <div className={`relative ${className}`}>
+      <input id={id} inputMode="decimal" placeholder="0" value={value} autoComplete="off"
+        onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, "").replace(/([.,].*)[.,]/g, "$1"))}
+        className="field tabular pr-12" {...rest} />
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[16px] text-ink-soft">gr</span>
+    </div>
+  );
+}

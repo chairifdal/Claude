@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
-import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Plus, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Plus, Sparkles, Target } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { monthRange, firstName, formatIDR } from "@/lib/format";
 import { daysBetween } from "@/lib/period";
@@ -163,6 +163,7 @@ export default function HomePage() {
           )}
 
           {show("quick") && <QuickEntry />}
+          {show("budget") && <BudgetCard roots={m.roots} daysLeft={daysLeft} />}
           {show("bills") && <BillsCard monthRows={monthRows} />}
 
 {show("couple") && (<>
@@ -300,4 +301,63 @@ function Lane({ label, value, color }) {
 function SharePart({ pid, ratio }) {
   const { personHue } = useApp();
   return <div style={{ width: `${ratio * 100}%`, background: `hsl(${personHue(pid)} 85% 58%)` }} />;
+}
+
+/** Ringkasan anggaran bulanan (periode keuangan berjalan); detailnya di halaman Anggaran. */
+function BudgetCard({ roots, daysLeft }) {
+  const { budgets, categoryById, t, cycle } = useApp();
+  const spentOf = (id) => roots.find((r) => r.id === id)?.total || 0;
+  const list = budgets.filter((b) => (b.period || "monthly") === "monthly" && categoryById[b.category_id])
+    .map((b) => ({ ...b, cat: categoryById[b.category_id], spent: spentOf(b.category_id) }))
+    .sort((a, b) => b.spent / b.amount - a.spent / a.amount);
+  const total = list.reduce((s, b) => s + b.amount, 0);
+  const spent = list.reduce((s, b) => s + b.spent, 0);
+  const tone = (r) => (r >= 1 ? "#FF3B30" : r >= 0.8 ? "#FF9500" : "#34C759");
+
+  if (!list.length) {
+    return (
+      <Link href="/anggaran" className="card flex items-center gap-3 p-4 active:bg-fill">
+        <span className="grid h-9 w-9 flex-none place-items-center rounded-[10px] bg-[#0A84FF] text-white"><Target className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-semibold">{t("Atur anggaran")}</span>
+          <span className="block text-[14px] text-ink-soft">{t("Tetapkan batas pengeluaran per kategori.")}</span>
+        </span>
+        <ChevronRight className="h-5 w-5 flex-none text-ink-mute" />
+      </Link>
+    );
+  }
+  return (
+    <section className="card p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="section-title">{cycle.isCalendar ? t("Anggaran bulan ini") : t("Anggaran periode ini")}</h2>
+        <Link href="/anggaran" className="link flex items-center text-[15px]">{t("Atur")} <ChevronRight className="h-4 w-4" /></Link>
+      </div>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <span className="text-[15px] text-ink-soft">{t("Sisa")} <Money value={total - spent} className={`text-[20px] font-bold ${spent > total ? "text-expense" : "text-ink"}`} dots={5} /></span>
+        <span className="text-[13px] text-ink-soft">{t("{n} hari lagi", { n: daysLeft })}</span>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-rule">
+        <div className="h-full rounded-full" style={{ width: `${Math.min(1, spent / total) * 100}%`, background: tone(spent / total) }} />
+      </div>
+      <ul className="mt-4 space-y-3">
+        {list.slice(0, 3).map((b) => {
+          const r = b.spent / b.amount;
+          return (
+            <li key={b.id} className="flex items-center gap-3">
+              <CategoryIcon category={b.cat} size={30} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2 text-[15px]">
+                  <span className="truncate">{b.cat.name}</span>
+                  <span className="tabular flex-none text-[13px] text-ink-soft">{Math.round(r * 100)}%</span>
+                </span>
+                <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-rule">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.min(1, r) * 100}%`, background: tone(r) }} />
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
