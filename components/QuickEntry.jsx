@@ -12,7 +12,9 @@ import AmountInput from "./AmountInput";
  */
 export default function QuickEntry() {
   const { supabase, accounts, categories, notify, refresh, t, canRecord, lastAccountId, rememberAccount, user, openTx } = useApp();
-  const since = useMemo(() => new Date(Date.now() - 60 * 86400000), []);
+  // Awal hari (bukan "detik ini") supaya kunci cache sama setiap kali Beranda dibuka:
+  // kategori langsung tampil dengan urutan yang benar, tanpa lompat setelah data dimuat.
+  const since = useMemo(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 60); }, []);
   const { rows } = useTransactions({ from: since, limit: 400 });
 
   const [type, setType] = useState("expense");

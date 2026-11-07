@@ -25,7 +25,7 @@ function brandGroups(accounts, t) {
     map.get(key).items.push(a);
   }
   const out = [];
-  const other = { key: "_other", brand: null, name: t("Akun lainnya"), items: [] };
+  const other = { key: "_other", brand: null, name: t("Lainnya"), items: [] };
   for (const g of map.values()) {
     if (g.key !== "_other" && g.items.length > 1) out.push({ ...g, name: g.brand.name });
     else other.items.push(...g.items);
@@ -39,6 +39,9 @@ function brandGroups(accounts, t) {
   return out;
 }
 
+// Urutan jenis di halaman Dompet
+const KIND_ORDER = ["bank", "ewallet", "cash", "investment", "credit"];
+
 // Warna per kelompok untuk bar alokasi
 const GROUP_COLOR = { liquid: "#2563EB", investment: "#AF52DE", credit: "#FF453A" };
 
@@ -48,7 +51,14 @@ export default function WalletPage() {
   const mine = accounts.filter((a) => a.owner_id === user?.id);
   const shared = accounts.filter((a) => a.owner_id !== user?.id);
   const groups = ACCOUNT_GROUPS.map((g) => ({ ...g, items: accounts.filter((a) => ACCOUNT_KINDS[a.kind]?.group === g.key) })).filter((g) => g.items.length);
-  const brands = useMemo(() => brandGroups(accounts, t), [accounts, t]);
+  // Jenis dulu (Bank, E-Wallet, …), lalu di dalamnya per merek
+  const kinds = useMemo(() => {
+    const order = [...KIND_ORDER, ...Object.keys(ACCOUNT_KINDS).filter((k) => !KIND_ORDER.includes(k))];
+    return order.map((k) => {
+      const items = accounts.filter((a) => (ACCOUNT_KINDS[a.kind] ? a.kind : "bank") === k);
+      return { key: k, kind: ACCOUNT_KINDS[k], items, brands: brandGroups(items, t) };
+    }).filter((g) => g.items.length);
+  }, [accounts, t]);
   const archived = allAccounts.filter((a) => a.archived && a.owner_id === user?.id);
 
   // Alokasi: aset positif per kelompok + utang kartu kredit
@@ -103,20 +113,38 @@ export default function WalletPage() {
               action={<button className="btn-primary h-11 text-[16px]" onClick={() => openAccount({})}>{t("Buat akun")}</button>} />
           )}
 
-          {brands.map((g) => (
-            <section key={g.key}>
-              <div className="mb-2.5 flex items-center gap-2.5 px-1">
-                {g.brand ? <BrandTile icon={g.icon} size={28} /> : (
-                  <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-fill text-ink-soft"><Wallet className="h-4 w-4" /></span>
+          {kinds.map((k) => {
+            const KindIcon = k.kind.icon;
+            // Sub-judul merek hanya perlu kalau ada merek dengan 2+ akun di jenis ini
+            const flat = k.brands.length === 1 && !k.brands[0].brand;
+            return (
+              <section key={k.key}>
+                <div className="mb-3 flex items-center gap-2.5 px-1">
+                  <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-fill text-brand-600"><KindIcon className="h-[18px] w-[18px]" /></span>
+                  <h2 className="min-w-0 flex-1 truncate section-title">{t(k.kind.label)}</h2>
+                  <Money value={sum(k.items)} compact className="flex-none text-[15px] font-semibold text-ink-soft" dots={5} />
+                </div>
+                {flat ? <WalletPager items={k.items} /> : (
+                  <div className="space-y-4">
+                    {k.brands.map((g) => (
+                      <div key={g.key}>
+                        <div className="mb-2 flex items-center gap-2 px-1">
+                          {g.brand ? <BrandTile icon={g.icon} size={22} /> : (
+                            <span className="grid h-[22px] w-[22px] place-items-center rounded-[6px] bg-fill text-ink-soft"><Wallet className="h-3.5 w-3.5" /></span>
+                          )}
+                          <h3 className="min-w-0 flex-1 truncate text-[16px] font-semibold">
+                            {g.name} <span className="text-[14px] font-normal text-ink-soft">· {g.items.length}</span>
+                          </h3>
+                          <Money value={sum(g.items)} compact className="flex-none text-[14px] text-ink-soft" dots={5} />
+                        </div>
+                        <WalletPager items={g.items} />
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <h2 className="min-w-0 flex-1 truncate text-[20px] font-bold tracking-tight">
-                  {g.name} <span className="text-[15px] font-medium text-ink-soft">· {g.items.length}</span>
-                </h2>
-                <Money value={sum(g.items)} compact className="flex-none text-[15px] font-semibold text-ink-soft" dots={5} />
-              </div>
-              <WalletPager items={g.items} />
-            </section>
-          ))}
+              </section>
+            );
+          })}
 
           {accounts.length > 0 && (
             <button onClick={() => openAccount({})}

@@ -4,7 +4,8 @@ import { Check, Loader2, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { parseAmount, amountToInput, toLocalInput, firstName, formatIDR } from "@/lib/format";
 import { CategoryIcon, Segmented, Sheet, Switch } from "./ui";
-import AmountInput from "./AmountInput";
+import AmountInput, { GramInput, parseGram, gramToInput } from "./AmountInput";
+import { isGram } from "@/lib/constants";
 import AccountPicker from "./AccountPicker";
 
 const QUICK = [10000, 20000, 50000, 100000];
@@ -43,6 +44,7 @@ function TxForm({ init }) {
   const [note, setNote] = useState(editing?.note || init.note || "");
   const [fee, setFee] = useState(editing?.fee ? amountToInput(editing.fee) : "");
   const [customFee, setCustomFee] = useState(!!editing?.fee && !FEES.includes(Number(editing.fee)));
+  const [qty, setQty] = useState(gramToInput(editing?.quantity));
   const [repeat, setRepeat] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -64,9 +66,12 @@ function TxForm({ init }) {
   }, [type, ownerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const destinations = accounts.filter((a) => a.id !== accountId);
+  // Akun emas bersatuan gram yang terlibat: tujuan transfer (beli) atau akun asal (jual / masuk / keluar)
+  const gramAcc = type === "transfer" && isGram(accountById[toAccountId]) ? accountById[toAccountId] : isGram(from) ? from : null;
+  const qtyValue = gramAcc ? parseGram(qty) : 0;
   const value = parseAmount(amount);
   const feeValue = type === "transfer" ? parseAmount(fee) : 0;
-  const valid = value > 0 && accountId && (type === "transfer" ? toAccountId && toAccountId !== accountId : true);
+  const valid = value > 0 && accountId && (type === "transfer" ? toAccountId && toAccountId !== accountId : true) && (!gramAcc || qtyValue > 0);
 
   // Tanggal: Hari ini / Kemarin / tanggal lain
   const dayOffset = (() => {
@@ -90,6 +95,8 @@ function TxForm({ init }) {
       occurred_at: new Date(occurredAt).toISOString(),
       note: note.trim() || null,
       fee: feeValue,
+      // Kolom gram (migrasi 010) hanya dikirim bila akun emas-gram terlibat
+      ...(gramAcc ? { quantity: qtyValue } : editing?.quantity ? { quantity: null } : {}),
       ...(init.billId && !editing ? { bill_id: init.billId } : {}),
     };
     const { error } = editing
@@ -170,6 +177,17 @@ function TxForm({ init }) {
       <AccountPicker id="tx-from" label={type === "transfer" ? t("Dari akun") : t("Akun")} accounts={sources} value={accountId} onChange={setAccountId} />
       {type === "transfer" && (
         <AccountPicker id="tx-to" label={t("Ke akun")} accounts={destinations} value={toAccountId} onChange={setToAccountId} placeholder={t("Pilih akun tujuan")} />
+      )}
+      {gramAcc && (
+        <div>
+          <label htmlFor="tx-qty" className="label">{t("Jumlah emas")} · {gramAcc.name}</label>
+          <GramInput id="tx-qty" value={qty} onChange={setQty} />
+          <p className="mt-2 text-[14px] text-ink-soft">
+            {qtyValue > 0 && value > 0
+              ? t("Setara {price} per gram", { price: formatIDR(Math.round(value / qtyValue)) })
+              : type === "transfer" && gramAcc.id === toAccountId ? t("Berapa gram yang kamu dapat dari pembelian ini?") : t("Berapa gram yang keluar/masuk dari akun emas ini?")}
+          </p>
+        </div>
       )}
       {type === "transfer" && (
         <div>

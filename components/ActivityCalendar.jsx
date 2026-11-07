@@ -48,7 +48,7 @@ export default function ActivityCalendar({ period, start, end, rows, selected, o
               <span className={`text-[15px] font-semibold capitalize ${current ? "text-brand-600" : ""}`}>{monthLabel(d, { month: "short" })}</span>
               {v && !hidden && (
                 <>
-                  {v.exp > 0 && <span className="tabular text-[12px] font-semibold text-ink-soft">−{formatShort(v.exp)}</span>}
+                  {v.exp > 0 && <span className="tabular text-[12px] font-semibold text-expense">−{formatShort(v.exp)}</span>}
                   {v.inc > 0 && <span className="tabular text-[12px] font-semibold text-income">+{formatShort(v.inc)}</span>}
                 </>
               )}
@@ -98,7 +98,7 @@ export default function ActivityCalendar({ period, start, end, rows, selected, o
                 </span>
                 {v && !hidden && (
                   <span className="mt-0.5 flex flex-col items-center leading-[1.15]">
-                    {v.exp > 0 && <span className="tabular text-[10.5px] font-semibold text-ink-soft">{formatShort(v.exp)}</span>}
+                    {v.exp > 0 && <span className="tabular text-[10.5px] font-semibold text-expense">−{formatShort(v.exp)}</span>}
                     {v.inc > 0 && <span className="tabular text-[10.5px] font-semibold text-income">+{formatShort(v.inc)}</span>}
                   </span>
                 )}

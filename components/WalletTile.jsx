@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { ACCOUNT_KINDS } from "@/lib/constants";
-import { firstName } from "@/lib/format";
+import { ACCOUNT_KINDS, INSTRUMENTS, isGram } from "@/lib/constants";
+import { firstName, formatGram } from "@/lib/format";
 import { Money, shade, BrandTile } from "./ui";
 import { parseIcon } from "@/lib/brands";
 import { goalProgress } from "./GoalsCard";
@@ -52,7 +52,7 @@ export default function WalletTile({ account: a }) {
           </>
         ) : (
           <p className="truncate text-[12px] font-medium text-white/75">
-            {t(kind.label.split(" /")[0])}{a.include_in_totals === false ? ` · ${t("tidak dihitung")}` : ""}
+            {isGram(a) ? formatGram(a.qty_balance) : t(INSTRUMENTS[a.instrument]?.label || kind.label.split(" /")[0])}{a.include_in_totals === false ? ` · ${t("tidak dihitung")}` : ""}
           </p>
         )}
       </div>

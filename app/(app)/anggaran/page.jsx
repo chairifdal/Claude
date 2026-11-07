@@ -48,7 +48,7 @@ export default function BudgetPage() {
 
   return (
     <div>
-      <PageHeader title={t("Anggaran")} subtitle={`${cycle.label(new Date())} · ${t("{n} hari lagi", { n: daysLeft })}`} />
+      <PageHeader title={t("Anggaran")} back="/" subtitle={`${cycle.label(new Date())} · ${t("{n} hari lagi", { n: daysLeft })}`} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">

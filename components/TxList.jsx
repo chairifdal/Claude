@@ -1,7 +1,7 @@
 "use client";
 import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, SlidersHorizontal } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { dayLabel, timeLabel, firstName, formatIDR } from "@/lib/format";
+import { dayLabel, timeLabel, firstName, formatIDR, formatGram } from "@/lib/format";
 import { Avatar, CategoryIcon, Empty, Money } from "./ui";
 
 /** Arah transaksi dari sudut pandang akun tertentu (atau semua akun yang terlihat) */
@@ -52,6 +52,8 @@ export function TxRow({ tx, perspectiveId }) {
     meta = [parent?.name, fromName].filter(Boolean).join(" · ");
     icon = <CategoryIcon category={cat || { color: "#94A3B8" }} size={44} />;
   }
+
+  if (tx.quantity) meta = `${meta} · ${formatGram(tx.quantity)}`;
 
   // Polaritas tenang: masuk hijau dengan +, keluar tinta dengan −
   const amount = dir === "in" ? tx.amount : dir === "out" ? -(tx.amount + (tx.fee || 0)) : tx.amount;

@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2, SlidersHorizontal, ChevronRight } from "lucide-react";
+import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2, SlidersHorizontal, ChevronRight, Coins } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
-import { monthRange, firstName, monthLabel } from "@/lib/format";
-import { ROLE_LABEL, ROLE_HINT } from "@/lib/constants";
+import { monthRange, firstName, monthLabel, formatGram } from "@/lib/format";
+import { ROLE_LABEL, ROLE_HINT, isGram } from "@/lib/constants";
 import { Avatar, Money, PageHeader, Sheet } from "@/components/ui";
 import { BankCard } from "@/components/BankCard";
 import ReconcileSheet from "@/components/ReconcileSheet";
@@ -51,7 +51,34 @@ export default function AccountDetail() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start">
         <div className="space-y-4">
           <BankCard account={account} />
-          {canWrite && (
+          {isGram(account) ? (
+            <>
+              <div className="card grid grid-cols-2 divide-x divide-line p-5">
+                <div className="pr-4">
+                  <p className="text-[14px] text-ink-soft">{t("Total emas")}</p>
+                  <p className="tabular text-[20px] font-semibold">{formatGram(account.qty_balance)}</p>
+                </div>
+                <div className="pl-4">
+                  <p className="text-[14px] text-ink-soft">{t("Modal")}</p>
+                  <Money value={account.cost_balance ?? account.balance} className="block text-[20px] font-semibold" dots={5} />
+                  {account.cost_balance != null && (
+                    <Money value={account.balance - account.cost_balance} sign compact dots={3}
+                      className={`text-[13px] font-medium ${account.balance >= account.cost_balance ? "text-income" : "text-expense"}`} />
+                  )}
+                </div>
+              </div>
+              {isOwner && (
+                <button onClick={() => openAccount({ account })} className="card flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill">
+                  <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#D4A017] text-white"><Coins className="h-[17px] w-[17px]" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[17px]">{t("Perbarui harga per gram")}</span>
+                    <span className="block text-[13px] text-ink-soft">{t("Supaya nilai emas mengikuti harga terkini")}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-ink-mute" />
+                </button>
+              )}
+            </>
+          ) : canWrite && (
             <button onClick={() => setReconcileOpen(true)} className="card flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill">
               <span className="grid h-[30px] w-[30px] place-items-center rounded-[8px] bg-[#5856D6] text-white"><SlidersHorizontal className="h-[17px] w-[17px]" /></span>
               <span className="min-w-0 flex-1">
