@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, PieChart, Pie } from "recharts";
 import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart, Target } from "lucide-react";
@@ -37,7 +36,6 @@ export default function AnalysisPage() {
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
   const { period, anchor, kind, who, group, range } = st;
   const [detail, setDetail] = useState(null);
-  const router = useRouter();
   const [flowMode, setFlowMode] = useState("rp");
 
   // Periode "Bulan" mengikuti siklus orang yang dipilih: saya → siklus saya; lainnya → bulan kalender
@@ -183,6 +181,9 @@ export default function AnalysisPage() {
   const budgetTotal = monthlyBudgets.reduce((s, b) => s + b.amount, 0);
   const budgetSpent = monthlyBudgets.reduce((s, b) => s + (data.expenseRoots.find((g) => g.id === b.category_id)?.total || 0), 0);
   const budgetRate = period === "month" && budgetTotal ? budgetSpent / budgetTotal : null;
+  const budgetRows = monthlyBudgets.map((b) => ({ ...b, cat: categoryById[b.category_id], spent: data.expenseRoots.find((g) => g.id === b.category_id)?.total || 0 }))
+    .sort((a, b) => b.spent / b.amount - a.spent / a.amount);
+  const budgetTone = (r) => (r > 1 ? BAD : r >= 0.8 ? WARN : GOOD);
   const pctText = (r) => (r === null ? "—" : `${Math.round(r * 1000) / 10}`.replace(".", ","));
 
   return (
@@ -239,7 +240,7 @@ export default function AnalysisPage() {
           </Tile>
         )}
 
-        <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => router.push("/anggaran")}
+        <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => setDetail("budget")}
           value={budgetRate === null ? "—" : <>{Math.round(budgetRate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
           status={!budgetTotal ? t("Atur anggaran") : budgetRate === null ? t("Pilih periode Bulan") : budgetRate > 1 ? t("Lewat anggaran") : t("terpakai")}
           statusColor={budgetRate === null ? "#8E8E93" : budgetRate > 1 ? BAD : budgetRate >= 0.8 ? WARN : GOOD}>
@@ -459,6 +460,62 @@ export default function AnalysisPage() {
           )}
           <Explain title={t("Apa yang dihitung?")}
             text={t("Pengeluaran di kategori yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal (termasuk sub-kategorinya). Persentase dihitung dari total pemasukan di periode yang sama.")} />
+        </div>
+      </Sheet>
+
+      <Sheet open={detail === "budget"} onClose={() => setDetail(null)} title={t("Laporan anggaran")} full>
+        <div className="space-y-4 pb-6">
+          {!budgetTotal ? (
+            <Empty title={t("Belum ada anggaran")} text={t("Anggaran diatur di Pengaturan, lalu laporannya tampil di sini.")}
+              action={<Link href="/anggaran?dari=analisis" className="btn-primary h-11 px-5 text-[16px]">{t("Atur anggaran")}</Link>} />
+          ) : period !== "month" ? (
+            <Empty title={t("Laporan anggaran per bulan")} text={t("Anggaran berlaku bulanan, jadi laporannya hanya untuk periode Bulan.")}
+              action={<button className="btn-primary h-11 px-5 text-[16px]" onClick={() => set({ period: "month", anchor: new Date() })}>{t("Lihat bulan ini")}</button>} />
+          ) : (
+            <>
+              <section className="card p-5">
+                <p className="text-[15px] text-ink-soft">{t("Terpakai di {period}", { period: periodLabel(period, anchor, ctx) })}</p>
+                <p className="text-[34px] font-bold leading-tight tracking-tight" style={{ color: budgetTone(budgetRate) }}>{Math.round(budgetRate * 100)}%</p>
+                <p className="mt-1 text-[15px] text-ink-soft">
+                  <Money value={budgetSpent} className="font-semibold text-ink" dots={5} /> {t("dari")} <Money value={budgetTotal} dots={5} />
+                </p>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-rule">
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(1, budgetRate) * 100}%`, background: budgetTone(budgetRate) }} />
+                </div>
+                <p className={`mt-2 text-[14px] font-medium ${budgetSpent > budgetTotal ? "text-expense" : "text-ink-soft"}`}>
+                  {budgetSpent > budgetTotal ? t("Lewat") : t("Sisa")} <Money value={Math.abs(budgetTotal - budgetSpent)} dots={5} />
+                  {" · "}{t("{n} dari {m} kategori lewat batas", { n: budgetRows.filter((b) => b.spent > b.amount).length, m: budgetRows.length })}
+                </p>
+              </section>
+              <section className="card p-5">
+                <h2 className="section-title">{t("Per kategori")}</h2>
+                <ul className="mt-3 space-y-4">
+                  {budgetRows.map((b) => {
+                    const r = b.spent / b.amount;
+                    return (
+                      <li key={b.id} className="flex items-center gap-3">
+                        <CategoryIcon category={b.cat} size={34} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="truncate text-[16px]">{b.cat.name}</span>
+                            <span className="tabular flex-none text-[13px] font-semibold" style={{ color: budgetTone(r) }}>{Math.round(r * 100)}%</span>
+                          </div>
+                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-rule">
+                            <div className="h-full rounded-full" style={{ width: `${Math.min(1, r) * 100}%`, background: budgetTone(r) }} />
+                          </div>
+                          <p className="mt-1 text-[13px] text-ink-soft">
+                            <Money value={b.spent} compact dots={4} /> / <Money value={b.amount} compact dots={4} />
+                            {b.spent > b.amount && <span className="text-expense"> · {t("lewat")} <Money value={b.spent - b.amount} compact dots={3} /></span>}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+              <p className="px-1 text-[13px] text-ink-soft">{t("Hanya anggaran bulanan. Untuk menambah atau mengubah anggaran, buka Pengaturan, Atur anggaran.")}</p>
+            </>
+          )}
         </div>
       </Sheet>
 

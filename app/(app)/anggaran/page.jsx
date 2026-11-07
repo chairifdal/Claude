@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2, Trash2 } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { amountToInput, parseAmount } from "@/lib/format";
@@ -10,6 +11,8 @@ import { BUDGET_PERIODS, PERIOD_LABEL, budgetWindow, periodOf } from "@/lib/budg
 
 export default function BudgetPage() {
   const { categories, categoryById, budgets, user, t, countsInStats, statRows, cycle } = useApp();
+  // Kembali ke halaman asal (Pengaturan / Analisis / Beranda)
+  const back = ({ pengaturan: "/pengaturan", analisis: "/analisis" })[useSearchParams().get("dari")] || "/";
   // Anggaran berlaku per periode keuangan (bulan kalender, tanggal tetap, atau gajian ke gajian)
   // Anggaran harian / mingguan / bulanan masing-masing punya rentang sendiri; ambil transaksi dari yang paling awal
   const now = new Date();
@@ -48,7 +51,7 @@ export default function BudgetPage() {
 
   return (
     <div>
-      <PageHeader title={t("Anggaran")} back="/" subtitle={`${cycle.label(new Date())} · ${t("{n} hari lagi", { n: daysLeft })}`} />
+      <PageHeader title={t("Atur anggaran")} back={back} subtitle={`${cycle.label(new Date())} · ${t("{n} hari lagi", { n: daysLeft })}`} />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="space-y-6">

@@ -2,18 +2,16 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, WalletCards, ChartPie, Target, Plus, Minus, ArrowLeftRight, WalletMinimal, Settings, ReceiptText } from "lucide-react";
+import { House, WalletCards, ChartPie, Plus, Minus, ArrowLeftRight, WalletMinimal, Settings, ReceiptText } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 
-// HP: 4 tab + tombol catat di tengah. Anggaran ada di Beranda, Analisis, dan Pengaturan.
+// 4 tab + tombol catat. Laporan anggaran ada di Beranda & Analisis; mengatur anggaran di Pengaturan.
 const TABS = [
   { href: "/", label: "Beranda", icon: House },
   { href: "/aktivitas", label: "Aktivitas", icon: ReceiptText },
   { href: "/analisis", label: "Analisis", icon: ChartPie },
   { href: "/dompet", label: "Dompet", icon: WalletCards },
 ];
-// Desktop punya ruang: Anggaran tetap tampil di sidebar
-const SIDEBAR = [...TABS, { href: "/anggaran", label: "Anggaran", icon: Target }];
 
 const ACTIONS = [
   { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
@@ -91,7 +89,7 @@ export default function AppChrome() {
         <Link href="/" aria-label="Finance Tracker"><Mark size={40} /></Link>
         <div className="mt-6">{addButton("h-12 w-12")}</div>
         <div className="mt-6 flex flex-col gap-2">
-          {SIDEBAR.map((tab) => {
+          {TABS.map((tab) => {
             const Icon = tab.icon;
             const active = isActive(tab.href);
             return (

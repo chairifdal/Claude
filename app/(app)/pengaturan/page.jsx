@@ -158,7 +158,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-1">
-          <Row href="/anggaran" icon={Target} label={t("Anggaran")} color="#0A84FF" />
+          <Row href="/anggaran?dari=pengaturan" icon={Target} label={t("Atur anggaran")} color="#0A84FF" />
           <Row href="/kategori" icon={Shapes} label={t("Kategori & sub-kategori")} color="#FF9500" />
           <Row href="/tagihan" icon={CalendarClock} label={t("Tagihan rutin")} color="#FF3B30" />
           <Row href="/berulang" icon={Repeat} label={t("Transaksi berulang")} color="#34C759" />

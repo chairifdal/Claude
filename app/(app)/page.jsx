@@ -316,7 +316,7 @@ function BudgetCard({ roots, daysLeft }) {
 
   if (!list.length) {
     return (
-      <Link href="/anggaran" className="card flex items-center gap-3 p-4 active:bg-fill">
+      <Link href="/anggaran?dari=beranda" className="card flex items-center gap-3 p-4 active:bg-fill">
         <span className="grid h-9 w-9 flex-none place-items-center rounded-[10px] bg-[#0A84FF] text-white"><Target className="h-5 w-5" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-semibold">{t("Atur anggaran")}</span>
@@ -330,7 +330,7 @@ function BudgetCard({ roots, daysLeft }) {
     <section className="card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="section-title">{cycle.isCalendar ? t("Anggaran bulan ini") : t("Anggaran periode ini")}</h2>
-        <Link href="/anggaran" className="link flex items-center text-[15px]">{t("Atur")} <ChevronRight className="h-4 w-4" /></Link>
+        <Link href="/anggaran?dari=beranda" className="link flex items-center text-[15px]">{t("Atur")} <ChevronRight className="h-4 w-4" /></Link>
       </div>
       <div className="mt-2 flex items-baseline justify-between gap-3">
         <span className="text-[15px] text-ink-soft">{t("Sisa")} <Money value={total - spent} className={`text-[20px] font-bold ${spent > total ? "text-expense" : "text-ink"}`} dots={5} /></span>
