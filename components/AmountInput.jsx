@@ -1,13 +1,16 @@
 "use client";
 import { formatAmountInput } from "@/lib/format";
 
-/** Input nominal Rupiah: titik ribuan otomatis, koma untuk desimal (maks. 2 angka). */
+/**
+ * Input nominal Rupiah: titik ribuan otomatis, koma untuk desimal (maks. 2 angka).
+ * autocomplete="transaction-amount" (token resmi) supaya iOS tidak mengira ini nomor kartu dan meminta Face ID.
+ */
 export default function AmountInput({ id, value, onChange, autoFocus, large = false, className = "", tone = "text-ink", ...rest }) {
   if (large) {
     return (
       <div className={`flex items-baseline gap-2 ${tone} ${className}`}>
         <span className="text-[24px] font-semibold">Rp</span>
-        <input id={id} autoFocus={autoFocus} inputMode="decimal" placeholder="0" value={value} autoComplete="off"
+        <input id={id} autoFocus={autoFocus} inputMode="decimal" placeholder="0" value={value} autoComplete="transaction-amount"
           onChange={(e) => onChange(formatAmountInput(e.target.value, value))}
           className="tabular min-w-0 flex-1 bg-transparent text-[36px] font-semibold leading-tight outline-none placeholder:text-control focus-visible:outline-none"
           style={{ fontSize: value.length > 13 ? 28 : 36 }} {...rest} />
@@ -17,7 +20,7 @@ export default function AmountInput({ id, value, onChange, autoFocus, large = fa
   return (
     <div className={`relative ${className}`}>
       <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[16px] text-ink-soft">Rp</span>
-      <input id={id} autoFocus={autoFocus} inputMode="decimal" placeholder="0" value={value} autoComplete="off"
+      <input id={id} autoFocus={autoFocus} inputMode="decimal" placeholder="0" value={value} autoComplete="transaction-amount"
         onChange={(e) => onChange(formatAmountInput(e.target.value, value))}
         className="field tabular pl-12" {...rest} />
     </div>
