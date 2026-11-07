@@ -5,7 +5,7 @@ import { Check, Loader2, Archive, Trash2, Upload, X, Search } from "lucide-react
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_COLORS, ACCOUNT_KINDS, INSTRUMENTS } from "@/lib/constants";
 import { amountToInput, parseAmount } from "@/lib/format";
-import { Sheet, Switch, BrandTile, Segmented } from "./ui";
+import { Sheet, Switch, BrandTile, Segmented, PlainTextField } from "./ui";
 import { BRANDS, BRAND_GROUPS } from "@/lib/brands";
 import { BankCard } from "./BankCard";
 import AmountInput, { GramInput, parseGram, gramToInput } from "./AmountInput";
@@ -142,13 +142,10 @@ function AccountForm({ account }) {
       <div className="pointer-events-none mx-auto max-w-[340px]"><BankCard account={preview} /></div>
 
       <div>
-        <label htmlFor="wl-name" className="label">{t("Nama akun")}</label>
-        {/* Form ini mirip form kartu pembayaran (pratinjau kartu + nama + angka), sehingga iOS menawarkan isi otomatis
-            kartu/kata sandi yang memicu Face ID dan mengabaikan autocomplete="off". Safari tidak pernah mengisi
-            otomatis kolom bertipe search, jadi kolom nama memakai type="search" (tampilannya tetap seperti kolom biasa). */}
-        <input id="wl-name" name="wallet-label" type="search" enterKeyHint="done" autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false}
-          data-1p-ignore data-lpignore="true" data-form-type="other"
-          className="field" placeholder={t("mis. BCA, Gopay, Dompet harian, Dana darurat")} value={name} onChange={(e) => setName(e.target.value)} />
+        <p id="wl-name-label" className="label">{t("Nama akun")}</p>
+        {/* Bukan <input>: iOS terus mengira kolom ini username dan meminta Face ID saat diketuk (lihat PlainTextField) */}
+        <PlainTextField id="wl-name" labelledBy="wl-name-label" value={name} onChange={setName}
+          placeholder={t("mis. BCA, Gopay, Dompet harian, Dana darurat")} />
       </div>
 
       <div>

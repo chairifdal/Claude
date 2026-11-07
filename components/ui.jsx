@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, CheckCircle2, AlertCircle, Inbox } from "lucide-react";
 import { useApp } from "@/lib/app-data";
@@ -205,4 +205,25 @@ export function shade(hex, pct) {
   const f = (c) => Math.max(0, Math.min(255, Math.round(c + (pct / 100) * (pct < 0 ? c : 255 - c))));
   const r = f(num >> 16), g = f((num >> 8) & 255), b = f(num & 255);
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
+
+/**
+ * Kolom teks satu baris tanpa <input>. iOS menawarkan isi otomatis kata sandi/kartu (yang meminta Face ID)
+ * hanya pada <input>; untuk kolom yang terus disalahkenali sebagai username (mis. "Nama akun"), pakai ini.
+ */
+export function PlainTextField({ id, value, onChange, placeholder, className = "", labelledBy, onEnter }) {
+  const ref = useRef(null);
+  // Sinkron dari luar (mis. nama terisi otomatis saat memilih merek) tanpa mengganggu kursor saat mengetik
+  useEffect(() => {
+    const el = ref.current;
+    if (el && document.activeElement !== el && el.textContent !== value) el.textContent = value;
+  }, [value]);
+  return (
+    <div id={id} ref={ref} role="textbox" aria-labelledby={labelledBy} aria-placeholder={placeholder} data-placeholder={placeholder}
+      contentEditable="plaintext-only" suppressContentEditableWarning spellCheck={false} autoCapitalize="words" enterKeyHint="done" inputMode="text"
+      onInput={(e) => onChange(e.currentTarget.textContent.replace(/\n/g, " "))}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onEnter ? onEnter() : e.currentTarget.blur(); } }}
+      onPaste={(e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain").replace(/\s+/g, " ")); }}
+      className={`field plain-field flex items-center overflow-x-auto whitespace-nowrap no-scrollbar ${className}`} />
+  );
 }

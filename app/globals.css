@@ -62,3 +62,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 input[type="search"] { -webkit-appearance: none; appearance: none; }
 input[type="search"]::-webkit-search-cancel-button,
 input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+
+/* PlainTextField: placeholder untuk kotak contenteditable yang kosong */
+.plain-field { cursor: text; -webkit-user-select: text; user-select: text; }
+.plain-field:empty::before { content: attr(data-placeholder); color: rgb(var(--ink-mute)); pointer-events: none; }
