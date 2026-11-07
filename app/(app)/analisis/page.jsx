@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, Piggy
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
 import { INSTRUMENTS } from "@/lib/constants";
+import { budgetReport, periodOf } from "@/lib/budgets";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented, AccountGlyph, Sheet } from "@/components/ui";
@@ -134,6 +135,7 @@ export default function AnalysisPage() {
       prevTotal: before[kind],
       groups: groupsOf(cur[kind], group),
       expenseRoots: groupsOf(cur.expense, "category"),
+      expenseRows: cur.expense,
       bs: bucketsOf(cur[kind]),
       expenseBs: bucketsOf(cur.expense),
       prevBs,
@@ -176,14 +178,20 @@ export default function AnalysisPage() {
   const invRate = data.income > 0 ? invNet / data.income : null;
   const hasCharityCats = categories.some((c) => c.kind === "expense" && CHARITY_RE.test(c.name));
   const charityRate = data.income > 0 ? data.charity.total / data.income : null;
-  // Anggaran bulanan vs pengeluaran (hanya bermakna saat periode = bulan)
-  const monthlyBudgets = budgets.filter((b) => (b.period || "monthly") === "monthly" && categoryById[b.category_id]);
-  const budgetTotal = monthlyBudgets.reduce((s, b) => s + b.amount, 0);
-  const budgetSpent = monthlyBudgets.reduce((s, b) => s + (data.expenseRoots.find((g) => g.id === b.category_id)?.total || 0), 0);
-  const budgetRate = period === "month" && budgetTotal ? budgetSpent / budgetTotal : null;
-  const budgetRows = monthlyBudgets.map((b) => ({ ...b, cat: categoryById[b.category_id], spent: data.expenseRoots.find((g) => g.id === b.category_id)?.total || 0 }))
-    .sort((a, b) => b.spent / b.amount - a.spent / a.amount);
-  const budgetTone = (r) => (r > 1 ? BAD : r >= 0.8 ? WARN : GOOD);
+  // Anggaran (harian / mingguan / bulanan) disesuaikan dengan periode yang dipilih
+  const budget = useMemo(() => budgetReport({
+    budgets, categoryById, rows: data.expenseRows, rootOf: (id) => rootCategory(categoryById[id], categoryById),
+    start, end, wholeMonth: period === "month",
+  }), [budgets, categoryById, data.expenseRows, start.getTime(), end.getTime(), period]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Warna mengikuti jalur: lewat batas = merah, lebih cepat dari bagian periode yang berjalan = oranye
+  const budgetTone = (r) => (r > 1 ? BAD : r > budget.pace + 0.05 ? WARN : GOOD);
+  const budgetStatus = {
+    none: { label: t("Belum ada anggaran"), color: "#8E8E93" },
+    ok: { label: t("Sesuai rencana"), color: GOOD },
+    fast: { label: t("Lebih cepat dari rencana"), color: WARN },
+    over: { label: t("Lewat anggaran"), color: BAD },
+  }[budget.state];
+  const perLabel = (b) => t({ daily: "{amount}/hari", weekly: "{amount}/minggu", monthly: "{amount}/bulan" }[periodOf(b)], { amount: hidden ? "Rp •••" : formatIDR(b.amount, { compact: true }) });
   const pctText = (r) => (r === null ? "—" : `${Math.round(r * 1000) / 10}`.replace(".", ","));
 
   return (
@@ -241,10 +249,9 @@ export default function AnalysisPage() {
         )}
 
         <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => setDetail("budget")}
-          value={budgetRate === null ? "—" : <>{Math.round(budgetRate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
-          status={!budgetTotal ? t("Belum ada anggaran") : budgetRate === null ? t("Pilih periode Bulan") : budgetRate > 1 ? t("Lewat anggaran") : t("terpakai")}
-          statusColor={budgetRate === null ? "#8E8E93" : budgetRate > 1 ? BAD : budgetRate >= 0.8 ? WARN : GOOD}>
-          <RateBar rate={budgetRate} color={budgetRate !== null && budgetRate > 1 ? BAD : "#0A84FF"} label={t("dari anggaran")} max={1} />
+          value={budget.rate === null ? "—" : <>{Math.round(budget.rate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
+          status={budgetStatus.label} statusColor={budgetStatus.color}>
+          <PaceBar rate={budget.rate} pace={budget.pace} color={budgetStatus.color} />
         </Tile>
 
         {showPeople && (
@@ -465,54 +472,65 @@ export default function AnalysisPage() {
 
       <Sheet open={detail === "budget"} onClose={() => setDetail(null)} title={t("Laporan anggaran")} full>
         <div className="space-y-4 pb-6">
-          {!budgetTotal ? (
+          {budget.rate === null ? (
             <Empty title={t("Belum ada anggaran")} text={t("Anggaran diatur di Pengaturan, lalu laporannya tampil di sini.")} />
-          ) : period !== "month" ? (
-            <Empty title={t("Laporan anggaran per bulan")} text={t("Anggaran berlaku bulanan, jadi laporannya hanya untuk periode Bulan.")}
-              action={<button className="btn-primary h-11 px-5 text-[16px]" onClick={() => set({ period: "month", anchor: new Date() })}>{t("Lihat bulan ini")}</button>} />
           ) : (
             <>
               <section className="card p-5">
                 <p className="text-[15px] text-ink-soft">{t("Terpakai di {period}", { period: periodLabel(period, anchor, ctx) })}</p>
-                <p className="text-[34px] font-bold leading-tight tracking-tight" style={{ color: budgetTone(budgetRate) }}>{Math.round(budgetRate * 100)}%</p>
+                <p className="text-[34px] font-bold leading-tight tracking-tight" style={{ color: budgetStatus.color }}>{Math.round(budget.rate * 100)}%</p>
                 <p className="mt-1 text-[15px] text-ink-soft">
-                  <Money value={budgetSpent} className="font-semibold text-ink" dots={5} /> {t("dari")} <Money value={budgetTotal} dots={5} />
+                  <Money value={budget.spent} className="font-semibold text-ink" dots={5} /> {t("dari")} <Money value={Math.round(budget.limit)} dots={5} />
                 </p>
-                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-rule">
-                  <div className="h-full rounded-full" style={{ width: `${Math.min(1, budgetRate) * 100}%`, background: budgetTone(budgetRate) }} />
-                </div>
-                <p className={`mt-2 text-[14px] font-medium ${budgetSpent > budgetTotal ? "text-expense" : "text-ink-soft"}`}>
-                  {budgetSpent > budgetTotal ? t("Lewat") : t("Sisa")} <Money value={Math.abs(budgetTotal - budgetSpent)} dots={5} />
-                  {" · "}{t("{n} dari {m} kategori lewat batas", { n: budgetRows.filter((b) => b.spent > b.amount).length, m: budgetRows.length })}
+                <div className="mt-3"><PaceBar rate={budget.rate} pace={budget.pace} color={budgetStatus.color} big /></div>
+                <p className="mt-2 text-[14px] font-medium" style={{ color: budgetStatus.color }}>{budgetStatus.label}</p>
+                <p className="mt-1 text-[14px] text-ink-soft">
+                  {budget.pace < 1
+                    ? t("Idealnya sekitar {pct}% terpakai di titik ini.", { pct: Math.round(budget.pace * 100) })
+                    : budget.spent > budget.limit ? <>{t("Lewat")} <Money value={budget.spent - budget.limit} dots={5} /></> : <>{t("Sisa")} <Money value={budget.limit - budget.spent} dots={5} /></>}
+                  {budget.items.length > 1 && <> · {t("{n} dari {m} kategori lewat batas", { n: budget.over, m: budget.items.length })}</>}
                 </p>
               </section>
-              <section className="card p-5">
-                <h2 className="section-title">{t("Per kategori")}</h2>
-                <ul className="mt-3 space-y-4">
-                  {budgetRows.map((b) => {
-                    const r = b.spent / b.amount;
-                    return (
-                      <li key={b.id} className="flex items-center gap-3">
-                        <CategoryIcon category={b.cat} size={34} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="truncate text-[16px]">{b.cat.name}</span>
-                            <span className="tabular flex-none text-[13px] font-semibold" style={{ color: budgetTone(r) }}>{Math.round(r * 100)}%</span>
-                          </div>
-                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-rule">
-                            <div className="h-full rounded-full" style={{ width: `${Math.min(1, r) * 100}%`, background: budgetTone(r) }} />
-                          </div>
-                          <p className="mt-1 text-[13px] text-ink-soft">
-                            <Money value={b.spent} compact dots={4} /> / <Money value={b.amount} compact dots={4} />
-                            {b.spent > b.amount && <span className="text-expense"> · {t("lewat")} <Money value={b.spent - b.amount} compact dots={3} /></span>}
-                          </p>
+
+              {budget.items.map((x) => {
+                const tone = budgetTone(x.rate);
+                return (
+                  <section key={x.id} className="card p-5">
+                    <div className="flex items-center gap-3">
+                      <CategoryIcon category={x.cat} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[17px] font-semibold">{x.cat.name}</p>
+                        <p className="truncate text-[13px] text-ink-soft">{x.budgets.map(perLabel).join(" · ")}</p>
+                      </div>
+                      <span className="tabular text-[17px] font-bold" style={{ color: tone }}>{Math.round(x.rate * 100)}%</span>
+                    </div>
+                    <div className="mt-3"><PaceBar rate={x.rate} pace={budget.pace} color={tone} /></div>
+                    <p className="mt-2 text-[14px] text-ink-soft">
+                      <Money value={x.spent} className="font-semibold text-ink" dots={4} /> {t("dari batas")} <Money value={Math.round(x.limit)} dots={4} />
+                      {x.spent > x.limit && <span className="text-expense"> · {t("lewat")} <Money value={x.spent - x.limit} compact dots={3} /></span>}
+                    </p>
+                    {x.daily && (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="min-w-0 rounded-[12px] bg-fill p-2.5">
+                          <p className="text-[12px] text-ink-soft">{t("Hari ini")}</p>
+                          {x.daily.today === null ? <p className="text-[15px] font-semibold text-ink-mute">—</p> : (
+                            <Money value={x.daily.today} compact dots={3} className={`block text-[15px] font-semibold ${x.daily.today > x.daily.amount ? "text-expense" : ""}`} />
+                          )}
                         </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-              <p className="px-1 text-[13px] text-ink-soft">{t("Laporan ini memakai anggaran bulanan.")}</p>
+                        <div className="min-w-0 rounded-[12px] bg-fill p-2.5">
+                          <p className="text-[12px] text-ink-soft">{t("Rata-rata/hari")}</p>
+                          <Money value={Math.round(x.daily.avg)} compact dots={3} className={`block text-[15px] font-semibold ${x.daily.avg > x.daily.amount ? "text-expense" : ""}`} />
+                        </div>
+                        <div className="min-w-0 rounded-[12px] bg-fill p-2.5">
+                          <p className="text-[12px] text-ink-soft">{t("Hari lewat batas")}</p>
+                          <p className={`text-[15px] font-semibold ${x.daily.over ? "text-expense" : "text-income"}`}>{t("{n} dari {m}", { n: x.daily.over, m: x.daily.days })}</p>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
+              <p className="px-1 text-[13px] text-ink-soft">{t("Batas disesuaikan dengan periode yang dipilih: anggaran harian × jumlah hari, mingguan × jumlah minggu.")}</p>
             </>
           )}
         </div>
@@ -667,6 +685,21 @@ function FlowBars({ income, roots, spent }) {
           {rest > 0 && <span className="block h-full rounded-[4px] bg-[#8E8E93]" style={{ flex: rest }} />}
         </span>
       </span>
+    </span>
+  );
+}
+
+/** Batang pemakaian anggaran + penanda "idealnya sampai sini" (bagian periode yang sudah berjalan) */
+function PaceBar({ rate, pace, color, big }) {
+  const w = rate === null ? 0 : Math.min(1, rate);
+  return (
+    <span className={`relative block ${big ? "pt-1" : "pt-3"}`}>
+      <span className={`block overflow-hidden rounded-full bg-rule ${big ? "h-3" : "h-2.5"}`}>
+        <span className="block h-full rounded-full" style={{ width: `${w * 100}%`, background: color }} />
+      </span>
+      {rate !== null && pace > 0 && pace < 1 && (
+        <i className="absolute -bottom-1 w-[2px] rounded-full bg-ink" style={{ left: `calc(${pace * 100}% - 1px)`, top: big ? 0 : 8 }} aria-hidden="true" />
+      )}
     </span>
   );
 }

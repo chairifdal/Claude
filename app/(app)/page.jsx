@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Plus, Sparkles } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
+import { budgetReport } from "@/lib/budgets";
 import { monthRange, firstName, formatIDR } from "@/lib/format";
 import { daysBetween } from "@/lib/period";
 import { billStatus, cardBills } from "@/lib/bills";
@@ -163,7 +164,7 @@ export default function HomePage() {
           )}
 
           {show("quick") && <QuickEntry />}
-          {show("budget") && <BudgetCard roots={m.roots} daysLeft={daysLeft} />}
+          {show("budget") && <BudgetCard rows={periodRows} start={per.start} end={per.end} daysLeft={daysLeft} />}
           {show("bills") && <BillsCard monthRows={monthRows} />}
 
 {show("couple") && (<>
@@ -304,45 +305,54 @@ function SharePart({ pid, ratio }) {
 }
 
 /** Laporan anggaran bulanan (periode keuangan berjalan). Mengatur anggaran hanya di Pengaturan. */
-function BudgetCard({ roots, daysLeft }) {
-  const { budgets, categoryById, t, cycle } = useApp();
-  const spentOf = (id) => roots.find((r) => r.id === id)?.total || 0;
-  const list = budgets.filter((b) => (b.period || "monthly") === "monthly" && categoryById[b.category_id])
-    .map((b) => ({ ...b, cat: categoryById[b.category_id], spent: spentOf(b.category_id) }))
-    .sort((a, b) => b.spent / b.amount - a.spent / a.amount);
-  const total = list.reduce((s, b) => s + b.amount, 0);
-  const spent = list.reduce((s, b) => s + b.spent, 0);
-  const tone = (r) => (r >= 1 ? "#FF3B30" : r >= 0.8 ? "#FF9500" : "#34C759");
+function BudgetCard({ rows, start, end, daysLeft }) {
+  const { budgets, categoryById, t, cycle, statRows, countsInStats, hidden } = useApp();
+  // Semua jenis anggaran (harian/mingguan/bulanan) disesuaikan dengan periode keuangan berjalan
+  const r = useMemo(() => budgetReport({
+    budgets, categoryById, rows: statRows(rows).filter((x) => x.type === "expense" && countsInStats(x)),
+    rootOf: (id) => rootCategory(categoryById[id], categoryById), start, end, wholeMonth: true,
+  }), [budgets, categoryById, rows, statRows, countsInStats, start, end]);
+  const tone = (x) => (x > 1 ? "#FF3B30" : x > r.pace + 0.05 ? "#FF9500" : "#34C759");
+  const stateColor = { ok: "#34C759", fast: "#FF9500", over: "#FF3B30" }[r.state];
 
   // Hanya laporan; anggaran diatur di Pengaturan. Belum ada anggaran → kartu tidak tampil.
-  if (!list.length) return null;
+  if (r.rate === null) return null;
+  const list = r.items;
   return (
     <section className="card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="section-title">{cycle.isCalendar ? t("Anggaran bulan ini") : t("Anggaran periode ini")}</h2>
-        <span className="text-[14px] text-ink-soft">{t("terpakai")} {Math.round((spent / total) * 100)}%</span>
+        <span className="text-[14px] font-medium" style={{ color: stateColor }}>{t("terpakai")} {Math.round(r.rate * 100)}%</span>
       </div>
       <div className="mt-2 flex items-baseline justify-between gap-3">
-        <span className="text-[15px] text-ink-soft">{t("Sisa")} <Money value={total - spent} className={`text-[20px] font-bold ${spent > total ? "text-expense" : "text-ink"}`} dots={5} /></span>
+        <span className="text-[15px] text-ink-soft">{r.spent > r.limit ? t("Lewat") : t("Sisa")} <Money value={Math.abs(Math.round(r.limit - r.spent))} className={`text-[20px] font-bold ${r.spent > r.limit ? "text-expense" : "text-ink"}`} dots={5} /></span>
         <span className="text-[13px] text-ink-soft">{t("{n} hari lagi", { n: daysLeft })}</span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-rule">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(1, spent / total) * 100}%`, background: tone(spent / total) }} />
+      <div className="relative mt-2">
+        <div className="h-2 overflow-hidden rounded-full bg-rule">
+          <div className="h-full rounded-full" style={{ width: `${Math.min(1, r.rate) * 100}%`, background: stateColor }} />
+        </div>
+        {r.pace > 0 && r.pace < 1 && <i className="absolute -top-1 -bottom-1 w-[2px] rounded-full bg-ink" style={{ left: `calc(${r.pace * 100}% - 1px)` }} aria-hidden="true" />}
       </div>
       <ul className="mt-4 space-y-3">
-        {list.slice(0, 3).map((b) => {
-          const r = b.spent / b.amount;
+        {list.slice(0, 3).map((x) => {
+          const rr = x.rate;
           return (
-            <li key={b.id} className="flex items-center gap-3">
-              <CategoryIcon category={b.cat} size={30} />
+            <li key={x.id} className="flex items-center gap-3">
+              <CategoryIcon category={x.cat} size={30} />
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2 text-[15px]">
-                  <span className="truncate">{b.cat.name}</span>
-                  <span className="tabular flex-none text-[13px] text-ink-soft">{Math.round(r * 100)}%</span>
+                  <span className="truncate">{x.cat.name}</span>
+                  <span className="tabular flex-none text-[13px] text-ink-soft">{Math.round(rr * 100)}%</span>
                 </span>
                 <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-rule">
-                  <span className="block h-full rounded-full" style={{ width: `${Math.min(1, r) * 100}%`, background: tone(r) }} />
+                  <span className="block h-full rounded-full" style={{ width: `${Math.min(1, rr) * 100}%`, background: tone(rr) }} />
                 </span>
+                {x.daily && x.daily.today !== null && (
+                  <span className="mt-1 block text-[12px] text-ink-soft">
+                    {t("Hari ini")} <span className={x.daily.today > x.daily.amount ? "font-semibold text-expense" : "font-semibold text-ink"}>{hidden ? "Rp •••" : formatIDR(x.daily.today, { compact: true })}</span> / {hidden ? "Rp •••" : formatIDR(x.daily.amount, { compact: true })}
+                  </span>
+                )}
               </span>
             </li>
           );
