@@ -57,3 +57,8 @@ input, select, textarea, button { font: inherit; letter-spacing: inherit; }
 /* iOS Safari: input tanggal punya lebar minimum bawaan sehingga bisa keluar dari kotaknya */
 input[type="date"] { min-width: 0; -webkit-appearance: none; appearance: none; }
 input[type="date"]::-webkit-date-and-time-value { text-align: left; }
+
+/* Kolom bertipe search yang dipakai sebagai kolom teks biasa (mis. nama akun): tanpa tombol hapus/ikon bawaan */
+input[type="search"] { -webkit-appearance: none; appearance: none; }
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; display: none; }

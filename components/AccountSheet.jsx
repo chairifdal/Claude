@@ -143,8 +143,11 @@ function AccountForm({ account }) {
 
       <div>
         <label htmlFor="wl-name" className="label">{t("Nama akun")}</label>
-        {/* Bukan kolom login: cegah iOS/password manager menawarkan isi otomatis (memicu Face ID) */}
-        <input id="wl-name" name="wallet-label" type="text" autoComplete="off" autoCapitalize="words" data-1p-ignore data-lpignore="true" data-form-type="other"
+        {/* Form ini mirip form kartu pembayaran (pratinjau kartu + nama + angka), sehingga iOS menawarkan isi otomatis
+            kartu/kata sandi yang memicu Face ID dan mengabaikan autocomplete="off". Safari tidak pernah mengisi
+            otomatis kolom bertipe search, jadi kolom nama memakai type="search" (tampilannya tetap seperti kolom biasa). */}
+        <input id="wl-name" name="wallet-label" type="search" enterKeyHint="done" autoComplete="off" autoCorrect="off" autoCapitalize="words" spellCheck={false}
+          data-1p-ignore data-lpignore="true" data-form-type="other"
           className="field" placeholder={t("mis. BCA, Gopay, Dompet harian, Dana darurat")} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
 
