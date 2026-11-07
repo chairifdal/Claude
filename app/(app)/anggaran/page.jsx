@@ -11,8 +11,8 @@ import { BUDGET_PERIODS, PERIOD_LABEL, budgetWindow, periodOf } from "@/lib/budg
 
 export default function BudgetPage() {
   const { categories, categoryById, budgets, user, t, countsInStats, statRows, cycle } = useApp();
-  // Kembali ke halaman asal (Pengaturan / Analisis / Beranda)
-  const back = ({ pengaturan: "/pengaturan", analisis: "/analisis" })[useSearchParams().get("dari")] || "/";
+  // Kembali ke halaman asal; bawaannya Pengaturan (tempat mengatur anggaran)
+  const back = ({ pengaturan: "/pengaturan", analisis: "/analisis", beranda: "/" })[useSearchParams().get("dari")] || "/pengaturan";
   // Anggaran berlaku per periode keuangan (bulan kalender, tanggal tetap, atau gajian ke gajian)
   // Anggaran harian / mingguan / bulanan masing-masing punya rentang sendiri; ambil transaksi dari yang paling awal
   const now = new Date();
