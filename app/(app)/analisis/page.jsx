@@ -242,7 +242,7 @@ export default function AnalysisPage() {
 
         <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => setDetail("budget")}
           value={budgetRate === null ? "—" : <>{Math.round(budgetRate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
-          status={!budgetTotal ? t("Atur anggaran") : budgetRate === null ? t("Pilih periode Bulan") : budgetRate > 1 ? t("Lewat anggaran") : t("terpakai")}
+          status={!budgetTotal ? t("Belum ada anggaran") : budgetRate === null ? t("Pilih periode Bulan") : budgetRate > 1 ? t("Lewat anggaran") : t("terpakai")}
           statusColor={budgetRate === null ? "#8E8E93" : budgetRate > 1 ? BAD : budgetRate >= 0.8 ? WARN : GOOD}>
           <RateBar rate={budgetRate} color={budgetRate !== null && budgetRate > 1 ? BAD : "#0A84FF"} label={t("dari anggaran")} max={1} />
         </Tile>
@@ -466,8 +466,7 @@ export default function AnalysisPage() {
       <Sheet open={detail === "budget"} onClose={() => setDetail(null)} title={t("Laporan anggaran")} full>
         <div className="space-y-4 pb-6">
           {!budgetTotal ? (
-            <Empty title={t("Belum ada anggaran")} text={t("Anggaran diatur di Pengaturan, lalu laporannya tampil di sini.")}
-              action={<Link href="/anggaran?dari=analisis" className="btn-primary h-11 px-5 text-[16px]">{t("Atur anggaran")}</Link>} />
+            <Empty title={t("Belum ada anggaran")} text={t("Anggaran diatur di Pengaturan, lalu laporannya tampil di sini.")} />
           ) : period !== "month" ? (
             <Empty title={t("Laporan anggaran per bulan")} text={t("Anggaran berlaku bulanan, jadi laporannya hanya untuk periode Bulan.")}
               action={<button className="btn-primary h-11 px-5 text-[16px]" onClick={() => set({ period: "month", anchor: new Date() })}>{t("Lihat bulan ini")}</button>} />
@@ -513,7 +512,7 @@ export default function AnalysisPage() {
                   })}
                 </ul>
               </section>
-              <p className="px-1 text-[13px] text-ink-soft">{t("Hanya anggaran bulanan. Untuk menambah atau mengubah anggaran, buka Pengaturan, Atur anggaran.")}</p>
+              <p className="px-1 text-[13px] text-ink-soft">{t("Laporan ini memakai anggaran bulanan.")}</p>
             </>
           )}
         </div>
