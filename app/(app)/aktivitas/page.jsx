@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Search, Download, SlidersHorizontal, X, Check } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
 import { periodRange, firstName } from "@/lib/format";
@@ -25,8 +26,10 @@ export default function ActivityPage() {
   // Periode "Bulan" mengikuti siklus saya (gajian / tanggal tetap) saat melihat Semua atau Saya
   const ctx = { cycle: who === "all" || who === user?.id ? cycle : null, range };
   const { start, end } = periodRange(period, anchor, ctx);
-  // ?akun=<id> dari halaman detail akun (layout hanya render di client, jadi window aman)
-  const [accountId, setAccountId] = useState(() => new URLSearchParams(window.location.search).get("akun") || "");
+  // ?akun=<id> dari halaman detail akun (useSearchParams: URL sudah benar juga saat navigasi di dalam aplikasi)
+  const akunParam = useSearchParams().get("akun") || "";
+  const [accountId, setAccountId] = useState(akunParam);
+  useEffect(() => { setAccountId(akunParam); }, [akunParam]);
   const { rows } = useTransactions({ from: start, to: end, limit: 5000, accountId: accountId || undefined });
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");

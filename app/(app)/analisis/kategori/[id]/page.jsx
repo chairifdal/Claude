@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell } from "recharts";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
@@ -14,8 +14,8 @@ import { TxRow } from "@/components/TxList";
 const ACCENT = "#007AFF";
 const NEUTRAL = "#B3D7FF";
 
-function initial() {
-  const q = new URLSearchParams(window.location.search);
+// Periode dari tautan Analisis (useSearchParams: URL sudah benar juga saat navigasi di dalam aplikasi)
+function initial(q) {
   const p = ["week", "month", "year", "range"].includes(q.get("p")) ? q.get("p") : "month";
   const d = q.get("d") ? new Date(`${q.get("d")}T12:00:00`) : new Date();
   const range = { from: q.get("f") || toISODate(new Date(Date.now() - 29 * 86400000)), to: q.get("t") || toISODate(new Date()) };
@@ -26,7 +26,8 @@ export default function CategoryDetail() {
   const C = chartColors(useTheme().isDark);
   const { id } = useParams();
   const { categoryById, categories, budgets, people, user, hidden, t, countsInStats, statRows, cycle } = useApp();
-  const [{ period, anchor, who, range }, setSt] = useState(initial);
+  const searchParams = useSearchParams();
+  const [{ period, anchor, who, range }, setSt] = useState(() => initial(searchParams));
   const [showAll, setShowAll] = useState(false);
   const cat = categoryById[id];
   const root = rootCategory(cat, categoryById);
