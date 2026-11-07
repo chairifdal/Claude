@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2, SlidersHorizontal, ChevronRight, Coins } from "lucide-react";
+import { Pencil, UserPlus, Send, Plus, Minus, ArrowLeftRight, Crown, X, LogOut, Clock, Loader2, SlidersHorizontal, ChevronRight, Coins, RefreshCw } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
 import { monthRange, firstName, monthLabel, formatGram } from "@/lib/format";
 import { ROLE_LABEL, ROLE_HINT, isGram } from "@/lib/constants";
@@ -11,13 +11,14 @@ import { BankCard } from "@/components/BankCard";
 import ReconcileSheet from "@/components/ReconcileSheet";
 import { TxGroupedList } from "@/components/TxList";
 import { goalProgress, GoalBar } from "@/components/GoalsCard";
+import { investStats } from "@/lib/investments";
 
 export default function AccountDetail() {
   const { id } = useParams();
   const router = useRouter();
-  const { allAccounts, loading, user, openTx, openAccount, t, cycle } = useApp();
+  const { allAccounts, loading, user, openTx, openAccount, t, cycle, locale } = useApp();
   const account = allAccounts.find((a) => a.id === id);
-  const { rows } = useTransactions({ accountId: id });
+  const { rows } = useTransactions({ accountId: id, limit: 3000 });
   const [shareOpen, setShareOpen] = useState(false);
   const [reconcileOpen, setReconcileOpen] = useState(false);
 
@@ -42,6 +43,9 @@ export default function AccountDetail() {
   const isOwner = account.owner_id === user?.id;
   const canWrite = isOwner || account.my_role === "editor";
   const goal = goalProgress(account);
+  const isInvest = account.kind === "investment";
+  const inv = isInvest ? investStats(account, rows) : null;
+  const invPct = inv?.pct !== null && inv?.pct !== undefined ? `${inv.gain >= 0 ? "+" : ""}${(Math.round(inv.pct * 1000) / 10).toString().replace(".", ",")}%` : "";
 
   return (
     <div>
@@ -73,6 +77,36 @@ export default function AccountDetail() {
                   <span className="min-w-0 flex-1">
                     <span className="block text-[17px]">{t("Perbarui harga per gram")}</span>
                     <span className="block text-[13px] text-ink-soft">{t("Supaya nilai emas mengikuti harga terkini")}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-ink-mute" />
+                </button>
+              )}
+            </>
+          ) : isInvest ? (
+            <>
+              <div className="card grid grid-cols-2 divide-x divide-line p-5">
+                <div className="pr-4">
+                  <p className="text-[14px] text-ink-soft">{t("Modal")}</p>
+                  <Money value={inv.modal} className="block text-[20px] font-semibold" dots={5} />
+                  <p className="text-[12px] text-ink-soft">{t("total setor − tarik")}</p>
+                </div>
+                <div className="pl-4">
+                  <p className="text-[14px] text-ink-soft">{t("Untung/rugi")}</p>
+                  <Money value={inv.gain} sign className={`block text-[20px] font-semibold ${inv.gain >= 0 ? "text-income" : "text-expense"}`} dots={5} />
+                  {invPct && <p className={`text-[12px] font-medium ${inv.gain >= 0 ? "text-income" : "text-expense"}`}>{invPct} {t("dari modal")}</p>}
+                </div>
+              </div>
+              {canWrite && (
+                <button onClick={() => setReconcileOpen(true)}
+                  className={`card flex w-full items-center gap-3 px-4 py-3 text-left active:bg-fill ${inv.stale ? "ring-2 ring-warn" : ""}`}>
+                  <span className={`grid h-[30px] w-[30px] place-items-center rounded-[8px] text-white ${inv.stale ? "bg-warn" : "bg-[#AF52DE]"}`}><RefreshCw className="h-[17px] w-[17px]" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[17px]">{t("Perbarui nilai investasi")}</span>
+                    <span className={`block text-[13px] ${inv.stale ? "font-medium text-warn" : "text-ink-soft"}`}>
+                      {inv.lastUpdate
+                        ? (inv.stale ? t("Terakhir diperbarui {n} hari lalu, saatnya cek lagi", { n: inv.staleDays }) : t("Terakhir diperbarui {date}", { date: inv.lastUpdate.toLocaleDateString(locale === "en" ? "en-GB" : "id-ID", { day: "numeric", month: "short", year: "numeric" }) }))
+                        : t("Samakan dengan nilai terkini di aplikasi investasimu")}
+                    </span>
                   </span>
                   <ChevronRight className="h-5 w-5 text-ink-mute" />
                 </button>

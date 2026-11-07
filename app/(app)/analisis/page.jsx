@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, Cell, PieChart, Pie } from "recharts";
-import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart, Target } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, LineChart, PieChart as PieIcon, PiggyBank, Shuffle, TrendingUp, Users, HandHeart, Target, RefreshCw } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { useTheme, chartColors } from "@/lib/theme";
 import { INSTRUMENTS } from "@/lib/constants";
 import { budgetReport, periodOf } from "@/lib/budgets";
+import { investStats, monthlyInvestSeries } from "@/lib/investments";
 import { periodRange, shiftPeriod, periodLabel, formatIDR, firstName } from "@/lib/format";
 import { buckets, daysIn, niceMax, toISODate } from "@/lib/analytics";
 import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented, AccountGlyph, Sheet } from "@/components/ui";
@@ -31,7 +32,7 @@ function loadState() {
 
 export default function AnalysisPage() {
   const C = chartColors(useTheme().isDark);
-  const { categoryById, categories, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById, budgets } = useApp();
+  const { categoryById, categories, people, user, hidden, t, countsInStats, statRows, cycle, accounts, accountById, budgets, supabase, version, locale } = useApp();
   const [st, setSt] = useState(loadState);
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
@@ -106,8 +107,8 @@ export default function AnalysisPage() {
       if (r.type === "transfer") {
         if (isInv(r.to_account_id) && !isInv(r.account_id)) { inv.in += r.amount; inv.perAccount[r.to_account_id] = (inv.perAccount[r.to_account_id] || 0) + r.amount; }
         if (isInv(r.account_id) && !isInv(r.to_account_id)) { inv.out += r.amount; inv.perAccount[r.account_id] = (inv.perAccount[r.account_id] || 0) - r.amount; }
-      } else if (r.is_adjustment && isInv(r.account_id)) {
-        // Kenaikan/penurunan nilai pasar dicatat lewat "Sesuaikan saldo"
+      } else if (isInv(r.account_id)) {
+        // Untung/rugi: Sesuaikan saldo (nilai pasar), dividen/bunga yang masuk ke akun investasi, biaya admin
         inv.change += r.type === "income" ? r.amount : -r.amount;
       }
     }
@@ -160,6 +161,36 @@ export default function AnalysisPage() {
     m[k].value += Math.max(0, a.balance);
     return m;
   }, {})).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
+
+  // Seluruh riwayat akun investasi (untuk modal, untung/rugi total, dan grafik 12 bulan)
+  const invIds = invAccounts.map((a) => a.id).sort().join(",");
+  const [invTx, setInvTx] = useState([]);
+  useEffect(() => {
+    if (!invIds) { setInvTx([]); return; }
+    let off = false;
+    (async () => {
+      const all = [];
+      for (let o = 0; o < 10000; o += 1000) {
+        const { data: d, error } = await supabase.from("transactions").select("id,account_id,to_account_id,type,amount,fee,is_adjustment,occurred_at")
+          .or(`account_id.in.(${invIds}),to_account_id.in.(${invIds})`).order("occurred_at").order("id").range(o, o + 999);
+        if (error || !d) break;
+        all.push(...d);
+        if (d.length < 1000) break;
+      }
+      if (!off) setInvTx(all.map((r) => ({ ...r, amount: Number(r.amount), fee: Number(r.fee) || 0 })));
+    })();
+    return () => { off = true; };
+  }, [supabase, invIds, version]);
+  const invStats = useMemo(() => Object.fromEntries(invAccounts.map((a) => [a.id,
+    investStats(a, invTx.filter((x) => x.account_id === a.id || x.to_account_id === a.id))])), [invAccounts, invTx]);
+  const invTotal = invAccounts.reduce((s, a) => ({ modal: s.modal + invStats[a.id].modal, value: s.value + a.balance }), { modal: 0, value: 0 });
+  const invGainAll = invTotal.value - invTotal.modal;
+  const invSeries = useMemo(() => {
+    const ids = new Set(invIds.split(","));
+    return monthlyInvestSeries(invTx, (id) => !!id && ids.has(id), new Date(end.getTime() - 1), 12,
+      (d) => d.toLocaleDateString(locale === "en" ? "en-GB" : "id-ID", { month: "short" }));
+  }, [invTx, invIds, end.getTime(), locale]); // eslint-disable-line react-hooks/exhaustive-deps
+  const staleInv = invAccounts.filter((a) => invStats[a.id]?.stale);
   const persons = [{ value: "all", label: t("Semua") }, ...Object.values(people).sort((a, b) => (a.id === user?.id ? -1 : b.id === user?.id ? 1 : 0))
     .map((p) => ({ value: p.id, label: p.id === user?.id ? t("Saya") : firstName(p) }))];
   const qs = `p=${period}&d=${toISODate(anchor)}&w=${who}${period === "range" ? `&f=${range.from}&t=${range.to}` : ""}`;
@@ -234,8 +265,9 @@ export default function AnalysisPage() {
         {invAccounts.length > 0 && (
           <Tile icon={TrendingUp} title={t("Investasi")} color={INV_COLOR} onClick={() => setDetail("invest")}
             value={invRate === null ? "—" : <>{pctText(invRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
-            status={invNet ? <>{invNet > 0 ? t("Disetor") : t("Ditarik")} <Money value={Math.abs(invNet)} compact dots={3} /></> : t("Tidak ada setoran")}
-            statusColor={invNet >= 0 ? INV_COLOR : BAD}>
+            status={data.inv.change ? <>{data.inv.change > 0 ? t("Untung") : t("Rugi")} <Money value={data.inv.change} compact sign dots={3} /></>
+              : invNet ? <>{invNet > 0 ? t("Disetor") : t("Ditarik")} <Money value={Math.abs(invNet)} compact dots={3} /></> : t("Tidak ada setoran")}
+            statusColor={data.inv.change ? (data.inv.change > 0 ? GOOD : BAD) : invNet >= 0 ? INV_COLOR : BAD}>
             <RateBar rate={invRate} color={INV_COLOR} label={t("dari pemasukan")} />
           </Tile>
         )}
@@ -396,6 +428,54 @@ export default function AnalysisPage() {
             </p>
             <div className="mt-3"><RateBar rate={invRate} color={INV_COLOR} label={t("dari pemasukan")} /></div>
           </section>
+
+          {staleInv.length > 0 && (
+            <div className="flex items-start gap-3 rounded-card bg-warn-soft p-4">
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] bg-warn text-white"><RefreshCw className="h-4 w-4" /></span>
+              <p className="text-[14px] leading-snug">
+                {t("Nilai {names} belum diperbarui lebih dari {n} hari. Buka akunnya lalu ketuk Perbarui nilai investasi.", { names: staleInv.map((a) => a.name).join(", "), n: 30 })}
+              </p>
+            </div>
+          )}
+
+          <section className="card p-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] text-ink-soft">{t("Untung/rugi {period}", { period: periodLabel(period, anchor, ctx) })}</p>
+                <Money value={data.inv.change} sign className={`block text-[22px] font-bold tracking-tight ${data.inv.change >= 0 ? "text-income" : "text-expense"}`} dots={4} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[13px] text-ink-soft">{t("Untung/rugi total")}</p>
+                <Money value={invGainAll} sign className={`block text-[22px] font-bold tracking-tight ${invGainAll >= 0 ? "text-income" : "text-expense"}`} dots={4} />
+                {invTotal.modal > 0 && <p className={`text-[13px] font-medium ${invGainAll >= 0 ? "text-income" : "text-expense"}`}>{invGainAll >= 0 ? "+" : ""}{pctText(invGainAll / invTotal.modal)}% {t("dari modal")}</p>}
+              </div>
+            </div>
+            <div className="mt-4 flex items-baseline justify-between gap-3">
+              <h3 className="text-[15px] font-semibold">{t("12 bulan terakhir")}</h3>
+              <span className="flex gap-3 text-[12px] text-ink-soft">
+                <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm" style={{ background: INV_COLOR }} /> {t("Setoran bersih")}</span>
+                <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-sm bg-income" /> {t("Untung/rugi")}</span>
+              </span>
+            </div>
+            <div className="mt-2 h-48">
+              <ResponsiveContainer>
+                <BarChart data={invSeries} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barGap={1}>
+                  <CartesianGrid vertical={false} stroke={C.grid} />
+                  <YAxis width={44} axisLine={false} tickLine={false} tickCount={5} tick={{ fontSize: 11, fill: C.tick }}
+                    tickFormatter={(v) => (hidden ? "" : formatIDR(v, { compact: true }).replace("Rp ", ""))} />
+                  <XAxis dataKey="label" axisLine={{ stroke: C.axis }} tickLine={false} tick={{ fontSize: 11, fill: C.tick }} interval={1} />
+                  <ReferenceLine y={0} stroke={C.axis} />
+                  <Tooltip cursor={{ fill: C.cursor }} formatter={(v, k) => [hidden ? "Rp •••••" : formatIDR(v, { sign: k === "gain" }), k === "dep" ? t("Setoran bersih") : t("Untung/rugi")]}
+                    contentStyle={{ borderRadius: 12, border: `1px solid ${C.tipBorder}`, background: C.tipBg, boxShadow: "none", fontSize: 13 }} />
+                  <Bar dataKey="dep" fill={INV_COLOR} radius={[3, 3, 0, 0]} maxBarSize={10} />
+                  <Bar dataKey="gain" radius={[3, 3, 0, 0]} maxBarSize={10}>
+                    {invSeries.map((m, i) => <Cell key={i} fill={m.gain >= 0 ? GOOD : BAD} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
           <section className="card p-5">
             <p className="text-[15px] text-ink-soft">{t("Portofolio")}</p>
             <Money value={portfolio} className="block text-[34px] font-bold leading-tight tracking-tight" />
@@ -404,11 +484,6 @@ export default function AnalysisPage() {
               <Flow label={t("Ditarik")} value={data.inv.out} color={WARN} />
               <Flow label={t("Bersih")} value={data.inv.in - data.inv.out} color={data.inv.in - data.inv.out >= 0 ? "#5856D6" : BAD} sign />
             </div>
-            {data.inv.change !== 0 && (
-              <p className="mt-1 text-[14px] text-ink-soft">
-                {t("Perubahan nilai (dari Sesuaikan saldo)")}: <Money value={data.inv.change} sign className={`font-semibold ${data.inv.change >= 0 ? "text-income" : "text-expense"}`} dots={4} />
-              </p>
-            )}
             {allocation.length > 0 && (
               <div className="mt-4">
                 <p className="text-[13px] font-semibold uppercase tracking-wide text-ink-soft">{t("Alokasi per instrumen")}</p>
@@ -433,15 +508,25 @@ export default function AnalysisPage() {
                     <AccountGlyph account={a} size={32} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[16px]">{a.name}</span>
-                      {data.inv.perAccount[a.id] ? <span className="block text-[13px] text-ink-soft">{t("Periode ini")} <Money value={data.inv.perAccount[a.id]} compact sign dots={3} /></span> : null}
+                      <span className="block truncate text-[13px] text-ink-soft">
+                        {t("Modal")} <Money value={invStats[a.id]?.modal || 0} compact dots={3} />
+                        {invStats[a.id]?.stale && <span className="font-medium text-warn"> · {t("perlu diperbarui")}</span>}
+                      </span>
                     </span>
-                    <Money value={a.balance} className="flex-none text-[16px] font-semibold" dots={5} />
+                    <span className="flex-none text-right">
+                      <Money value={a.balance} className="block text-[16px] font-semibold" dots={5} />
+                      {invStats[a.id] && (
+                        <span className={`block text-[13px] font-medium ${invStats[a.id].gain >= 0 ? "text-income" : "text-expense"}`}>
+                          <Money value={invStats[a.id].gain} compact sign dots={3} />{invStats[a.id].pct !== null && ` (${invStats[a.id].gain >= 0 ? "+" : ""}${pctText(invStats[a.id].pct)}%)`}
+                        </span>
+                      )}
+                    </span>
                   </Link>
                 </li>
               ))}
             </ul>
           </section>
-          <Explain title={t("Investasi")} text={t("Setoran ke akun investasi dicatat sebagai Transfer, jadi tidak dihitung sebagai pengeluaran.")} />
+          <Explain title={t("Cara membaca")} text={t("Setoran & penarikan dicatat sebagai Transfer, jadi bukan pengeluaran. Modal = total setor − total tarik. Untung/rugi = nilai sekarang − modal; naik-turunnya tercatat setiap kali kamu memperbarui nilai investasi (paling pas di akhir bulan).")} />
         </div>
       </Sheet>
 

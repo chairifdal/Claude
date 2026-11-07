@@ -13,7 +13,7 @@ import AmountInput from "./AmountInput";
 export default function ReconcileSheet({ account, open, onClose }) {
   const { t } = useApp();
   return (
-    <Sheet open={open} onClose={onClose} title={t("Sesuaikan saldo")}>
+    <Sheet open={open} onClose={onClose} title={account?.kind === "investment" ? t("Perbarui nilai investasi") : t("Sesuaikan saldo")}>
       {open && <Form key={account.id} account={account} onDone={onClose} />}
     </Sheet>
   );
@@ -22,6 +22,8 @@ export default function ReconcileSheet({ account, open, onClose }) {
 function Form({ account, onDone }) {
   const { supabase, notify, refresh, t } = useApp();
   const isCredit = account.kind === "credit";
+  // Akun investasi: yang diketik adalah nilai portofolio terkini; selisihnya = untung/rugi
+  const isInvest = account.kind === "investment";
   const [actual, setActual] = useState("");
   const [busy, setBusy] = useState(false);
   const entered = parseAmount(actual);
@@ -35,24 +37,24 @@ function Form({ account, onDone }) {
     setBusy(true);
     const { error } = await supabase.from("transactions").insert({
       account_id: account.id, type: diff > 0 ? "income" : "expense", amount: Math.abs(diff),
-      is_adjustment: true, note: t("Penyesuaian saldo"),
+      is_adjustment: true, note: isInvest ? t(diff > 0 ? "Kenaikan nilai investasi" : "Penurunan nilai investasi") : t("Penyesuaian saldo"),
     });
     setBusy(false);
     if (error) return notify(error.message.includes("row-level") ? t("Kamu tidak punya akses untuk akun ini") : error.message, "err");
-    notify(t("Saldo disesuaikan"));
+    notify(isInvest ? t("Nilai investasi diperbarui") : t("Saldo disesuaikan"));
     refresh(); onDone();
   }
 
   return (
     <div className="space-y-5 pb-4">
       <div className="rounded-[14px] bg-surface p-4">
-        <p className="text-[14px] text-ink-soft">{isCredit ? t("Tagihan menurut aplikasi") : t("Saldo menurut aplikasi")}</p>
+        <p className="text-[14px] text-ink-soft">{isCredit ? t("Tagihan menurut aplikasi") : isInvest ? t("Nilai tercatat sekarang") : t("Saldo menurut aplikasi")}</p>
         <Money value={isCredit ? Math.max(0, -account.balance) : account.balance} className="block text-[24px] font-bold" />
       </div>
       <div>
-        <label htmlFor="rec-actual" className="label">{isCredit ? t("Tagihan sebenarnya") : t("Saldo sebenarnya")}</label>
+        <label htmlFor="rec-actual" className="label">{isCredit ? t("Tagihan sebenarnya") : isInvest ? t("Nilai portofolio terkini") : t("Saldo sebenarnya")}</label>
         <AmountInput id="rec-actual" value={actual} onChange={setActual} />
-        <p className="mt-2 pl-1 text-[14px] text-ink-soft">{t("Lihat angka ini di m-banking, e-wallet, atau dompet Anda.")}</p>
+        <p className="mt-2 pl-1 text-[14px] text-ink-soft">{isInvest ? t("Lihat total nilai di aplikasi investasimu (mis. Bibit, Stockbit). Paling pas diperbarui di akhir bulan.") : t("Lihat angka ini di m-banking, e-wallet, atau dompet Anda.")}</p>
       </div>
       {actual !== "" && (
         <div className={`rounded-[14px] p-4 ${diff === 0 ? "bg-income-soft" : "bg-fill"}`}>
@@ -60,15 +62,15 @@ function Form({ account, onDone }) {
             <p className="text-[16px] font-medium text-income-ink">{t("Sudah cocok, tidak perlu penyesuaian.")}</p>
           ) : (
             <>
-              <p className="text-[14px] text-ink-soft">{t("Selisih yang akan dicatat")}</p>
+              <p className="text-[14px] text-ink-soft">{isInvest ? (diff > 0 ? t("Untung yang akan dicatat") : t("Rugi yang akan dicatat")) : t("Selisih yang akan dicatat")}</p>
               <p className={`text-[22px] font-bold ${diff > 0 ? "text-income" : "text-expense"}`}>{formatIDR(diff, { sign: true })}</p>
-              <p className="mt-1 text-[13px] text-ink-soft">{t("Dicatat sebagai \"Penyesuaian saldo\" dan tidak dihitung di grafik maupun anggaran.")}</p>
+              <p className="mt-1 text-[13px] text-ink-soft">{isInvest ? t("Masuk ke untung/rugi investasi di Analisis, bukan pemasukan atau pengeluaran.") : t("Dicatat sebagai \"Penyesuaian saldo\" dan tidak dihitung di grafik maupun anggaran.")}</p>
             </>
           )}
         </div>
       )}
       <button className="btn-primary w-full" disabled={!ready || busy} onClick={save}>
-        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : t("Sesuaikan")}
+        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : isInvest ? t("Perbarui") : t("Sesuaikan")}
       </button>
     </div>
   );
