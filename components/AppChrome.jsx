@@ -30,10 +30,13 @@ export default function AppChrome() {
   const [open, setOpen] = useState(false);
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
+  // Sedang membuka detail wallet (/dompet/<id>) → catatan baru memakai wallet itu sebagai akun
+  const walletId = pathname.match(/^\/dompet\/([^/]+)/)?.[1];
+
   function pick(a) {
     setOpen(false);
     if (a.type === "account") openAccount({});
-    else openTx({ type: a.type });
+    else openTx(walletId ? { type: a.type, accountId: walletId } : { type: a.type });
   }
 
   const addButton = (cls) => (

@@ -1,7 +1,7 @@
 "use client";
-import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, SlidersHorizontal, ChevronUp, ChevronDown } from "lucide-react";
 import { useApp } from "@/lib/app-data";
-import { dayLabel, timeLabel, firstName, formatIDR, formatGram } from "@/lib/format";
+import { dayLabel, timeLabel, dateTimeLabel, firstName, formatIDR, formatGram } from "@/lib/format";
 import { Avatar, CategoryIcon, Empty, Money } from "./ui";
 
 /** Arah transaksi dari sudut pandang akun tertentu (atau semua akun yang terlihat) */
@@ -15,7 +15,7 @@ export function txDirection(tx, accountById, perspectiveId) {
   return seeTo ? "in" : "out";
 }
 
-export function TxRow({ tx, perspectiveId }) {
+export function TxRow({ tx, perspectiveId, showDate = false, reorder = null }) {
   const { accountById, categoryById, people, user, openTx, t, canRecord } = useApp();
   const dir = txDirection(tx, accountById, perspectiveId);
   const cat = tx.category_id ? categoryById[tx.category_id] : null;
@@ -59,9 +59,11 @@ export function TxRow({ tx, perspectiveId }) {
   const amount = dir === "in" ? tx.amount : dir === "out" ? -(tx.amount + (tx.fee || 0)) : tx.amount;
   const amountClass = dir === "in" ? "text-income" : "text-ink";
 
-  return (
-    <button type="button" disabled={!canEdit} onClick={() => openTx({ tx })}
-      className="flex min-h-[72px] w-full items-center gap-3 rounded-control px-3 py-3 text-left transition enabled:hover:bg-canvas">
+  const when = showDate ? dateTimeLabel(tx.occurred_at) : timeLabel(tx.occurred_at);
+
+  const row = (
+    <button type="button" disabled={!canEdit || !!reorder} onClick={() => openTx({ tx })}
+      className="flex min-h-[72px] w-full min-w-0 flex-1 items-center gap-3 rounded-control px-3 py-3 text-left transition enabled:hover:bg-canvas">
       {icon}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[17px]">{title}</p>
@@ -72,15 +74,38 @@ export function TxRow({ tx, perspectiveId }) {
       </div>
       <div className="flex-none text-right">
         <Money value={amount} sign={dir === "in"} className={`block text-[17px] font-semibold ${amountClass}`} dots={5} />
-        <p className="tabular text-[14px] text-ink-soft">{timeLabel(tx.occurred_at)}</p>
+        <p className="tabular text-[14px] text-ink-soft">{when}</p>
       </div>
     </button>
   );
+  if (!reorder) return row;
+  const btn = "grid h-8 w-8 place-items-center rounded-full bg-fill text-brand-600 active:scale-90 disabled:opacity-30";
+  return (
+    <div className="flex items-center gap-1 pr-2">
+      {row}
+      <div className="flex flex-none flex-col gap-1">
+        <button type="button" className={btn} onClick={reorder.up} disabled={!reorder.up || reorder.busy} aria-label={t("Naikkan")}><ChevronUp className="h-4 w-4" /></button>
+        <button type="button" className={btn} onClick={reorder.down} disabled={!reorder.down || reorder.busy} aria-label={t("Turunkan")}><ChevronDown className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
 }
 
-export function TxGroupedList({ rows, perspectiveId, emptyText, emptyHint }) {
+/**
+ * Daftar transaksi. Default: dikelompokkan per hari mengikuti urutan `rows`.
+ * flat: satu kartu tanpa judul hari (untuk urutan nominal), tanggal tampil di tiap baris.
+ * onMove(tx, neighbor): bila diisi, tiap baris punya tombol naik/turun di dalam harinya.
+ */
+export function TxGroupedList({ rows, perspectiveId, emptyText, emptyHint, flat = false, onMove = null, moving = false }) {
   const { t } = useApp();
   if (!rows.length) return <Empty title={emptyText || t("Belum ada transaksi")} text={emptyHint ?? t("Tekan + untuk mencatat yang pertama.")} />;
+  if (flat) {
+    return (
+      <div className="card p-1">
+        {rows.map((tx) => <TxRow key={tx.id} tx={tx} perspectiveId={perspectiveId} showDate />)}
+      </div>
+    );
+  }
   const groups = [];
   let current = null;
   for (const tx of rows) {
@@ -94,7 +119,14 @@ export function TxGroupedList({ rows, perspectiveId, emptyText, emptyHint }) {
         <section key={g.key}>
           <h3 className="mb-1.5 pl-4 text-[13px] font-medium uppercase tracking-wide text-ink-soft">{dayLabel(g.date)}</h3>
           <div className="card p-1">
-            {g.items.map((tx) => <TxRow key={tx.id} tx={tx} perspectiveId={perspectiveId} />)}
+            {g.items.map((tx, i) => (
+              <TxRow key={tx.id} tx={tx} perspectiveId={perspectiveId}
+                reorder={onMove ? {
+                  busy: moving,
+                  up: i > 0 ? () => onMove(tx, g.items[i - 1]) : null,
+                  down: i < g.items.length - 1 ? () => onMove(tx, g.items[i + 1]) : null,
+                } : null} />
+            ))}
           </div>
         </section>
       ))}
