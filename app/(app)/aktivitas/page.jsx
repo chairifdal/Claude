@@ -16,7 +16,6 @@ const SORTS = [
   { value: "amount_desc", label: "Nominal terbesar" },
   { value: "amount_asc", label: "Nominal terkecil" },
 ];
-const MINUTE = 60000;
 
 const TYPES = [
   { value: "all", label: "Semua" },
@@ -29,9 +28,10 @@ export default function ActivityPage() {
   const { accountById, categoryById, user, accounts, people, t, cycle, statRows, countsInStats, locale, supabase, notify, refresh, canRecord } = useApp();
   // Urutan daftar (disimpan per perangkat)
   const [sort, setSortState] = useState(() => { try { return localStorage.getItem("kk-tx-sort") || "newest"; } catch { return "newest"; } });
-  const setSort = (v) => { setSortState(v); setReordering(false); try { localStorage.setItem("kk-tx-sort", v); } catch {} };
-  const [reordering, setReordering] = useState(false);
+  const setSort = (v) => { setSortState(v); try { localStorage.setItem("kk-tx-sort", v); } catch {} };
   const [moving, setMoving] = useState(false);
+  // Jam baru hasil geser ditampilkan langsung, sebelum data dari server datang
+  const [pendingTimes, setPendingTimes] = useState({});
   const [period, setPeriod] = useState("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [range, setRange] = useState(() => ({ from: toISODate(new Date(Date.now() - 29 * 86400000)), to: toISODate(new Date()) }));
@@ -67,48 +67,53 @@ export default function ActivityPage() {
     return true;
   }), [rows, filter, q, who, categoryById]);
   const list = useMemo(() => {
-    const l = day ? base.filter((tx) => toISODate(tx.occurred_at) === day) : base;
-    if (sort === "newest") return l; // urutan bawaan dari database
+    let l = day ? base.filter((tx) => toISODate(tx.occurred_at) === day) : base;
+    if (Object.keys(pendingTimes).length) l = l.map((tx) => (pendingTimes[tx.id] ? { ...tx, occurred_at: pendingTimes[tx.id] } : tx));
     const time = (tx) => new Date(tx.occurred_at).getTime();
     const total = (tx) => tx.amount + (tx.fee || 0);
     const cmp = {
+      newest: (a, b) => time(b) - time(a) || (a.id < b.id ? -1 : 1), // sama dengan urutan database
       oldest: (a, b) => time(a) - time(b),
       amount_desc: (a, b) => total(b) - total(a) || time(b) - time(a),
       amount_asc: (a, b) => total(a) - total(b) || time(b) - time(a),
     }[sort];
     return cmp ? [...l].sort(cmp) : l;
-  }, [base, day, sort]);
+  }, [base, day, sort, pendingTimes]);
   const byAmount = sort === "amount_desc" || sort === "amount_asc";
 
-  // Atur urutan dalam satu hari: urutan harian mengikuti jam, jadi jam kedua catatan ditukar.
-  // Kalau jamnya sama persis, yang dipindah digeser 1 menit supaya urutannya berubah.
+  // Tahan lalu geser di dalam satu hari. Urutan harian mengikuti jam, jadi jam-jam yang sudah ada di hari itu
+  // dibagikan ulang sesuai urutan baru. Jam yang kembar diberi selisih 1 detik supaya urutannya pasti.
   const editable = (tx) => {
     const from = accountById[tx.account_id];
     return from && (canRecord(from) || (tx.type === "transfer" && tx.created_by === user?.id));
   };
-  async function move(tx, neighbor) {
-    if (!editable(tx) || !editable(neighbor)) return notify(t("Kamu tidak punya akses untuk mengubah catatan ini"), "err");
-    const ta = new Date(tx.occurred_at).getTime();
-    const tb = new Date(neighbor.occurred_at).getTime();
-    let newA = tb, newB = ta;
-    if (ta === tb) {
-      // tx harus tampil sebelum tetangganya bila tetangga ada di atasnya
-      const aFirst = list.indexOf(neighbor) < list.indexOf(tx);
-      const later = (aFirst ? 1 : -1) * (sort === "oldest" ? -1 : 1);
-      const shifted = tb + later * MINUTE;
-      if (new Date(shifted).toDateString() === new Date(tb).toDateString()) newA = shifted;
-      else newB = ta - later * MINUTE;
+  async function reorderDay(items, from, to) {
+    const order = [...items];
+    const [moved] = order.splice(from, 1);
+    order.splice(to, 0, moved);
+    const desc = sort !== "oldest"; // tampilan terbaru dulu = jam menurun
+    const times = items.map((tx) => new Date(tx.occurred_at).getTime()).sort((a, b) => (desc ? b - a : a - b));
+    const next = order.map((tx, i) => ({ tx, time: times[i] }));
+    for (let i = 1; i < next.length; i++) {
+      const prev = next[i - 1].time;
+      if (desc ? next[i].time >= prev : next[i].time <= prev) next[i].time = prev + (desc ? -1000 : 1000);
     }
+    const dayOf = (ms) => new Date(ms).toDateString();
+    const changed = next.filter(({ tx, time }) => time !== new Date(tx.occurred_at).getTime());
+    if (!changed.length) return;
+    if (changed.some(({ tx }) => !editable(tx))) return notify(t("Kamu tidak punya akses untuk mengubah catatan ini"), "err");
+    if (changed.some(({ tx, time }) => dayOf(time) !== dayOf(tx.occurred_at))) return notify(t("Tidak bisa digeser ke sana"), "err");
+    setPendingTimes((p) => ({ ...p, ...Object.fromEntries(changed.map(({ tx, time }) => [tx.id, new Date(time).toISOString()])) }));
     setMoving(true);
-    const [r1, r2] = await Promise.all([
-      supabase.from("transactions").update({ occurred_at: new Date(newA).toISOString() }).eq("id", tx.id),
-      newB !== ta ? supabase.from("transactions").update({ occurred_at: new Date(newB).toISOString() }).eq("id", neighbor.id) : Promise.resolve({}),
-    ]);
+    const res = await Promise.all(changed.map(({ tx, time }) =>
+      supabase.from("transactions").update({ occurred_at: new Date(time).toISOString() }).eq("id", tx.id)));
     setMoving(false);
-    const err = r1.error || r2.error;
-    if (err) return notify(err.message, "err");
+    const err = res.find((r) => r.error)?.error;
+    if (err) { notify(err.message, "err"); setPendingTimes({}); }
     refresh();
   }
+  // Data baru dari server sudah memuat jam baru → hapus tampilan sementara
+  useEffect(() => { setPendingTimes({}); }, [rows]);
 
   const statsOf = (l) => statRows(l).filter(countsInStats);
   const calRows = useMemo(() => statsOf(base), [base, statRows, countsInStats]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -230,16 +235,10 @@ export default function ActivityPage() {
               {SORTS.map((o) => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
             </select>
           </label>
-          {!byAmount && list.length > 1 && (
-            <button onClick={() => setReordering((r) => !r)} aria-pressed={reordering}
-              className={`chip h-9 text-[14px] ${reordering ? "bg-brand-600 text-white" : "bg-fill text-brand-600"}`}>
-              {reordering ? <><Check className="h-4 w-4" /> {t("Selesai")}</> : t("Atur urutan")}
-            </button>
-          )}
+          {!byAmount && list.length > 1 && <span className="text-[13px] text-ink-mute">{t("Tahan lalu geser untuk mengubah urutan")}</span>}
         </div>
-        {reordering && !byAmount && <p className="-mt-2 mb-3 pl-1 text-[13px] text-ink-soft">{t("Geser dengan panah naik/turun. Urutan dalam satu hari mengikuti jam, jadi jam kedua catatan akan ditukar.")}</p>}
         <TxGroupedList rows={list} perspectiveId={accountId || undefined} emptyText={t("Tidak ada catatan")}
-          flat={byAmount} onMove={reordering && !byAmount ? move : null} moving={moving} />
+          flat={byAmount} onReorder={byAmount ? null : reorderDay} busy={moving} />
       </div>
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title={t("Filter")}
