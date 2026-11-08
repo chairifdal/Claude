@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Search, Download, SlidersHorizontal, X, Check } from "lucide-react";
+import { Search, Download, SlidersHorizontal, X, Check, ArrowUpDown } from "lucide-react";
 import { useApp, useTransactions } from "@/lib/app-data";
 import { periodRange, firstName } from "@/lib/format";
 import { toISODate } from "@/lib/analytics";
@@ -9,6 +9,14 @@ import { Money, PageHeader, Segmented, Sheet, AccountGlyph } from "@/components/
 import { TxGroupedList, txDirection } from "@/components/TxList";
 import { PeriodPill } from "@/components/PeriodBar";
 import ActivityCalendar from "@/components/ActivityCalendar";
+
+const SORTS = [
+  { value: "newest", label: "Terbaru dulu" },
+  { value: "oldest", label: "Terlama dulu" },
+  { value: "amount_desc", label: "Nominal terbesar" },
+  { value: "amount_asc", label: "Nominal terkecil" },
+];
+const MINUTE = 60000;
 
 const TYPES = [
   { value: "all", label: "Semua" },
@@ -18,7 +26,12 @@ const TYPES = [
 ];
 
 export default function ActivityPage() {
-  const { accountById, categoryById, user, accounts, people, t, cycle, statRows, countsInStats, locale } = useApp();
+  const { accountById, categoryById, user, accounts, people, t, cycle, statRows, countsInStats, locale, supabase, notify, refresh, canRecord } = useApp();
+  // Urutan daftar (disimpan per perangkat)
+  const [sort, setSortState] = useState(() => { try { return localStorage.getItem("kk-tx-sort") || "newest"; } catch { return "newest"; } });
+  const setSort = (v) => { setSortState(v); setReordering(false); try { localStorage.setItem("kk-tx-sort", v); } catch {} };
+  const [reordering, setReordering] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [period, setPeriod] = useState("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [range, setRange] = useState(() => ({ from: toISODate(new Date(Date.now() - 29 * 86400000)), to: toISODate(new Date()) }));
@@ -53,7 +66,49 @@ export default function ActivityPage() {
     }
     return true;
   }), [rows, filter, q, who, categoryById]);
-  const list = useMemo(() => (day ? base.filter((tx) => toISODate(tx.occurred_at) === day) : base), [base, day]);
+  const list = useMemo(() => {
+    const l = day ? base.filter((tx) => toISODate(tx.occurred_at) === day) : base;
+    if (sort === "newest") return l; // urutan bawaan dari database
+    const time = (tx) => new Date(tx.occurred_at).getTime();
+    const total = (tx) => tx.amount + (tx.fee || 0);
+    const cmp = {
+      oldest: (a, b) => time(a) - time(b),
+      amount_desc: (a, b) => total(b) - total(a) || time(b) - time(a),
+      amount_asc: (a, b) => total(a) - total(b) || time(b) - time(a),
+    }[sort];
+    return cmp ? [...l].sort(cmp) : l;
+  }, [base, day, sort]);
+  const byAmount = sort === "amount_desc" || sort === "amount_asc";
+
+  // Atur urutan dalam satu hari: urutan harian mengikuti jam, jadi jam kedua catatan ditukar.
+  // Kalau jamnya sama persis, yang dipindah digeser 1 menit supaya urutannya berubah.
+  const editable = (tx) => {
+    const from = accountById[tx.account_id];
+    return from && (canRecord(from) || (tx.type === "transfer" && tx.created_by === user?.id));
+  };
+  async function move(tx, neighbor) {
+    if (!editable(tx) || !editable(neighbor)) return notify(t("Kamu tidak punya akses untuk mengubah catatan ini"), "err");
+    const ta = new Date(tx.occurred_at).getTime();
+    const tb = new Date(neighbor.occurred_at).getTime();
+    let newA = tb, newB = ta;
+    if (ta === tb) {
+      // tx harus tampil sebelum tetangganya bila tetangga ada di atasnya
+      const aFirst = list.indexOf(neighbor) < list.indexOf(tx);
+      const later = (aFirst ? 1 : -1) * (sort === "oldest" ? -1 : 1);
+      const shifted = tb + later * MINUTE;
+      if (new Date(shifted).toDateString() === new Date(tb).toDateString()) newA = shifted;
+      else newB = ta - later * MINUTE;
+    }
+    setMoving(true);
+    const [r1, r2] = await Promise.all([
+      supabase.from("transactions").update({ occurred_at: new Date(newA).toISOString() }).eq("id", tx.id),
+      newB !== ta ? supabase.from("transactions").update({ occurred_at: new Date(newB).toISOString() }).eq("id", neighbor.id) : Promise.resolve({}),
+    ]);
+    setMoving(false);
+    const err = r1.error || r2.error;
+    if (err) return notify(err.message, "err");
+    refresh();
+  }
 
   const statsOf = (l) => statRows(l).filter(countsInStats);
   const calRows = useMemo(() => statsOf(base), [base, statRows, countsInStats]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -167,7 +222,24 @@ export default function ActivityPage() {
           <span>{t("{n} catatan", { n: list.length })}</span>
           <span>{t("Arus bersih")} <Money value={net} sign className={`font-medium ${net >= 0 ? "text-income" : "text-ink"}`} dots={5} /></span>
         </div>
-        <TxGroupedList rows={list} perspectiveId={accountId || undefined} emptyText={t("Tidak ada catatan")} />
+        <div className="-mt-2 mb-4 flex items-center justify-between gap-2">
+          <label className="relative flex items-center">
+            <ArrowUpDown className="pointer-events-none absolute left-3 h-4 w-4 text-brand-600" />
+            <select aria-label={t("Urutkan")} value={sort} onChange={(e) => setSort(e.target.value)}
+              className="h-9 appearance-none rounded-full bg-fill pl-9 pr-4 text-[14px] font-medium text-brand-600 outline-none">
+              {SORTS.map((o) => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
+            </select>
+          </label>
+          {!byAmount && list.length > 1 && (
+            <button onClick={() => setReordering((r) => !r)} aria-pressed={reordering}
+              className={`chip h-9 text-[14px] ${reordering ? "bg-brand-600 text-white" : "bg-fill text-brand-600"}`}>
+              {reordering ? <><Check className="h-4 w-4" /> {t("Selesai")}</> : t("Atur urutan")}
+            </button>
+          )}
+        </div>
+        {reordering && !byAmount && <p className="-mt-2 mb-3 pl-1 text-[13px] text-ink-soft">{t("Geser dengan panah naik/turun. Urutan dalam satu hari mengikuti jam, jadi jam kedua catatan akan ditukar.")}</p>}
+        <TxGroupedList rows={list} perspectiveId={accountId || undefined} emptyText={t("Tidak ada catatan")}
+          flat={byAmount} onMove={reordering && !byAmount ? move : null} moving={moving} />
       </div>
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title={t("Filter")}
