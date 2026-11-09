@@ -4,6 +4,7 @@ import { Check, Loader2, Trash2 } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { parseAmount, amountToInput, toLocalInput, firstName, formatIDR } from "@/lib/format";
 import { CategoryIcon, Segmented, Sheet, Switch } from "./ui";
+import CategoryPager from "./CategoryPager";
 import AmountInput, { GramInput, parseGram, gramToInput } from "./AmountInput";
 import { isGram } from "@/lib/constants";
 import AccountPicker from "./AccountPicker";
@@ -20,6 +21,13 @@ export default function TransactionSheet() {
       {txSheet && <TxForm key={txSheet.tx?.id || `${txSheet.type}-${txSheet.billId || ""}`} init={txSheet} />}
     </Sheet>
   );
+}
+
+/** Bagi chip sub-kategori ke 1–3 baris berurutan (≤4 → 1 baris, ≤8 → 2 baris, selebihnya 3 baris). */
+function chipRows(items) {
+  const rows = items.length <= 4 ? 1 : items.length <= 8 ? 2 : 3;
+  const per = Math.ceil(items.length / rows);
+  return Array.from({ length: rows }, (_, i) => items.slice(i * per, (i + 1) * per)).filter((r) => r.length);
 }
 
 function TxForm({ init }) {
@@ -215,29 +223,26 @@ function TxForm({ init }) {
           <p className="label">
             {t("Kategori")} {from && from.owner_id !== user?.id && <span className="font-normal text-ink-soft">· {t("milik {name}", { name: firstName(people[from.owner_id]) })}</span>}
           </p>
-          <div className="grid grid-cols-4 gap-1">
-            {roots.map((c) => {
-              const active = activeRootId === c.id;
-              return (
-                <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active && categoryId === c.id ? "" : c.id)}
-                  className={`flex flex-col items-center gap-1 rounded-control border px-1 py-2 transition ${active ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-canvas"}`}>
-                  <CategoryIcon category={c} size={32} />
-                  <span className="line-clamp-2 text-center text-[13px] leading-tight">{c.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          <CategoryPager key={`${type}-${ownerId}`} items={roots} isActive={(c) => activeRootId === c.id}
+            onPick={(c) => setCategoryId(activeRootId === c.id && categoryId === c.id ? "" : c.id)} />
           {children.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {children.map((c) => {
-                const active = categoryId === c.id;
-                return (
-                  <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? c.parent_id : c.id)}
-                    className={`chip h-10 border ${active ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>
-                    {active && <Check className="h-3.5 w-3.5" />} {c.name}
-                  </button>
-                );
-              })}
+            // Sub-kategori: maksimal 3 baris (diisi per baris), selebihnya digeser ke samping
+            <div className="-mx-4 mt-3 overflow-x-auto px-4 no-scrollbar">
+              <div className="flex w-max flex-col gap-2">
+                {chipRows(children).map((row, ri) => (
+                  <div key={ri} className="flex gap-2">
+                    {row.map((c) => {
+                      const active = categoryId === c.id;
+                      return (
+                        <button key={c.id} type="button" aria-pressed={active} onClick={() => setCategoryId(active ? c.parent_id : c.id)}
+                          className={`chip h-10 border ${active ? "border-brand-600 bg-brand-600 text-white" : "border-transparent bg-fill text-ink"}`}>
+                          {active && <Check className="h-3.5 w-3.5" />} {c.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

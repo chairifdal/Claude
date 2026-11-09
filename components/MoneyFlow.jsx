@@ -50,18 +50,26 @@ export function buildFlow({ income, expense, inv, categoryById, accountById, t }
   if (inTotal > outTotal) mids.push({ id: "m:rest", name: t("Sisa"), color: REST, value: inTotal - outTotal, kids: {} });
   if (outTotal > inTotal) sources.push({ id: "s:bal", name: t("Dari saldo"), color: GREY, value: outTotal - inTotal });
 
-  // Rincian di kolom kanan: hanya untuk tujuan yang punya lebih dari satu rincian (atau satu sub-kategori)
-  const right = [];
+  // Rincian di kolom kanan: sub-kategori (maks. MAX_CHILDREN + "Lainnya") atau akun investasi
   for (const m of mids) {
-    let kids = Object.entries(m.kids).map(([k, v]) => ({ ...v, id: `r:${m.id}:${k}` })).sort((a, b) => b.value - a.value);
+    let kids = Object.entries(m.kids || {}).map(([k, v]) => ({ ...v, id: `r:${m.id}:${k}` })).sort((a, b) => b.value - a.value);
     if (!kids.length || (kids.length === 1 && kids[0].id.endsWith(":_self"))) { m.children = []; continue; }
     if (kids.length > MAX_CHILDREN + 1) {
       const rest = kids.slice(MAX_CHILDREN).reduce((s, k) => s + k.value, 0);
       kids = [...kids.slice(0, MAX_CHILDREN), { id: `r:${m.id}:more`, name: t("Lainnya"), color: m.color, value: rest }];
     }
     m.children = kids;
-    right.push(...kids);
   }
+  // Kalau ada kolom kanan, kategori tanpa sub-kategori (juga "Sisa") diteruskan lurus ke kanan
+  // dengan namanya sendiri, supaya kolom kanan tidak bolong.
+  if (mids.some((m) => m.children.length)) {
+    for (const m of mids) {
+      if (m.children.length) continue;
+      m.pass = true;
+      m.children = [{ id: `r:${m.id}:_pass`, name: m.name, color: m.color, value: m.value }];
+    }
+  }
+  const right = mids.flatMap((m) => m.children);
   return { sources, mids, right, total: Math.max(inTotal, outTotal), income: income.reduce((s, r) => s + r.amount, 0), spent: expense.reduce((s, r) => s + r.amount, 0) };
 }
 
@@ -160,7 +168,7 @@ export default function MoneyFlow({ flow, mode = "rp" }) {
           {layout.L.map((n) => <rect key={n.id} x={layout.x0} y={n.y} width={layout.NW} height={n.h} rx="2" fill={n.color} />)}
           {layout.M.map((n) => <rect key={n.id} x={layout.x1} y={n.y} width={layout.NW} height={n.h} rx="2" fill={n.color} />)}
           {layout.R.map((n) => <rect key={n.id} x={layout.x2} y={n.y} width={layout.NW} height={n.h} rx="2" fill={n.color} />)}
-          {layout.M.map((n) => layout.hasRight ? (
+          {layout.M.filter((n) => !n.pass).map((n) => layout.hasRight ? (
             <text key={n.id} x={layout.x1 - 6} textAnchor="end" style={halo}>
               <tspan x={layout.x1 - 6} y={n.cy - 2} className="fill-ink" fontSize="11.5" fontWeight="600">{clip(n.name, 16)}</tspan>
               <tspan x={layout.x1 - 6} y={n.cy + 11} className="fill-ink-soft" fontSize="10.5">{fmt(n.value)}</tspan>
