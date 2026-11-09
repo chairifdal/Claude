@@ -64,6 +64,7 @@ export default function AnalysisPage() {
     const sum = (list) => list.reduce((s, r) => s + r.amount, 0);
     const income = sum(cur.income), expense = sum(cur.expense);
 
+    const hasKids = new Set(Object.values(categoryById).filter((c) => c.parent_id).map((c) => c.parent_id));
     const groupsOf = (list, mode) => {
       const g = {};
       for (const r of list) {
@@ -71,7 +72,13 @@ export default function AnalysisPage() {
         const root = rootCategory(cat, categoryById);
         const node = mode === "sub" ? cat : root;
         const key = node?.id || "none";
-        g[key] = g[key] || { id: key, cat: node || { name: t("Tanpa kategori"), icon: "circle", color: "#8E8E93" }, parent: mode === "sub" && cat?.parent_id ? root : null, total: 0, n: 0 };
+        // Per sub-kategori: catatan langsung di induk yang punya sub-kategori tampil sebagai "Umum/General"
+        const general = mode === "sub" && cat && !cat.parent_id && hasKids.has(cat.id);
+        g[key] = g[key] || {
+          id: key,
+          cat: node ? (general ? { ...node, name: t("Umum") } : node) : { name: t("Tanpa kategori"), icon: "circle", color: "#8E8E93" },
+          parent: mode === "sub" && (cat?.parent_id || general) ? root : null, total: 0, n: 0,
+        };
         g[key].total += r.amount; g[key].n++;
       }
       return Object.values(g).sort((a, b) => b.total - a.total);

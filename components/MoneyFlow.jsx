@@ -31,7 +31,7 @@ export function buildFlow({ income, expense, inv, categoryById, accountById, t }
     mid[k] = mid[k] || { id: `m:${k}`, name: root?.name || t("Tanpa kategori"), color: root?.color || GREY, value: 0, kids: {} };
     mid[k].value += r.amount;
     const ck = cat && root && cat.id !== root.id ? cat.id : "_self";
-    mid[k].kids[ck] = mid[k].kids[ck] || { name: ck === "_self" ? mid[k].name : cat.name, color: (ck === "_self" ? null : cat.color) || mid[k].color, value: 0 };
+    mid[k].kids[ck] = mid[k].kids[ck] || { name: ck === "_self" ? t("Umum") : cat.name, color: (ck === "_self" ? null : cat.color) || mid[k].color, value: 0 };
     mid[k].kids[ck].value += r.amount;
   }
   const mids = Object.values(mid).sort((a, b) => b.value - a.value);

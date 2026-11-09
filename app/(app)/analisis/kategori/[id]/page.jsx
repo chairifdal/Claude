@@ -61,7 +61,7 @@ export default function CategoryDetail() {
     for (const r of cur) {
       const c = categoryById[r.category_id];
       const key = c?.parent_id ? c.id : "_self";
-      subs[key] = subs[key] || { name: key === "_self" ? t("{cat} (umum)", { cat: cat?.name }) : c.name, color: key === "_self" ? cat?.color : c.color, total: 0 };
+      subs[key] = subs[key] || { name: key === "_self" ? t("Umum") : c.name, color: key === "_self" ? cat?.color : c.color, total: 0 };
       subs[key].total += r.amount;
     }
     const byPerson = {};
