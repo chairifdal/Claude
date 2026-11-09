@@ -19,8 +19,9 @@ const today = () => toISODate(new Date());
 const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); return toISODate(d); };
 const GOOD = "#34C759", WARN = "#FF9500", BAD = "#FF3B30";
 const CHARITY = "#00A884";
-// Kategori ibadah harta: dikenali dari nama kategori (atau kategori induknya)
-const CHARITY_RE = /infa[qk]|s[h]?[ao]d[ae]q[ao]?h|sedeka[hk]|zaka[th]|wakaf|donasi|amal\b/i;
+// Kategori ibadah harta: dikenali dari nama kategori (atau kategori induknya).
+// "Religious Giving" (dan semua sub-kategorinya: Infaq & Sedekah, Zakat, Umroh, Gift) ikut terhitung.
+const CHARITY_RE = /religious\s*giving|infa[qk]|s[h]?[ao]d[ae]q[ao]?h|sedeka[hk]|zaka[th]|wakaf|donasi|amal\b/i;
 
 function loadState() {
   try {
@@ -215,6 +216,8 @@ export default function AnalysisPage() {
   const invNet = data.inv.in - data.inv.out;
   const invRate = data.income > 0 ? invNet / data.income : null;
   const hasCharityCats = categories.some((c) => c.kind === "expense" && CHARITY_RE.test(c.name));
+  // Judul kartu mengikuti nama kategori induknya (mis. "Religious Giving") bila ada
+  const charityTitle = categories.find((c) => c.kind === "expense" && !c.parent_id && c.owner_id === user?.id && CHARITY_RE.test(c.name))?.name || t("Infaq & Sedekah");
   const charityRate = data.income > 0 ? data.charity.total / data.income : null;
   // Anggaran (harian / mingguan / bulanan) disesuaikan dengan periode yang dipilih
   const budget = useMemo(() => budgetReport({
@@ -280,7 +283,7 @@ export default function AnalysisPage() {
         )}
 
         {hasCharityCats && (
-          <Tile icon={HandHeart} title={t("Infaq & Sedekah")} color={CHARITY} onClick={() => setDetail("charity")}
+          <Tile icon={HandHeart} title={charityTitle} color={CHARITY} onClick={() => setDetail("charity")}
             value={charityRate === null ? "—" : <>{pctText(charityRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
             status={<Money value={data.charity.total} compact dots={4} />}>
             <RateBar rate={charityRate} color={CHARITY} label={t("dari pemasukan")} max={0.2} />
@@ -537,7 +540,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "charity"} onClose={() => setDetail(null)} title={t("Infaq & Sedekah")} full>
+      <Sheet open={detail === "charity"} onClose={() => setDetail(null)} title={charityTitle} full>
         <div className="space-y-4 pb-6">
           <section className="card p-5">
             <p className="text-[15px] text-ink-soft">{t("Total di {period}", { period: periodLabel(period, anchor, ctx) })}</p>
@@ -558,7 +561,7 @@ export default function AnalysisPage() {
             </section>
           )}
           <Explain title={t("Apa yang dihitung?")}
-            text={t("Pengeluaran di kategori yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal (termasuk sub-kategorinya). Persentase dihitung dari total pemasukan di periode yang sama.")} />
+            text={t("Semua pengeluaran di kategori Religious Giving beserta sub-kategorinya (mis. Infaq & Sedekah, Zakat, Umroh, Gift), ditambah kategori lain yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal. Persentase dihitung dari total pemasukan di periode yang sama.")} />
         </div>
       </Sheet>
 
