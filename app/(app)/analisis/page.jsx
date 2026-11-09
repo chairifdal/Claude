@@ -20,8 +20,8 @@ const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); retu
 const GOOD = "#34C759", WARN = "#FF9500", BAD = "#FF3B30";
 const CHARITY = "#00A884";
 // Kategori ibadah harta: dikenali dari nama kategori (atau kategori induknya).
-// "Religious Giving" (dan semua sub-kategorinya: Infaq & Sedekah, Zakat, Umroh, Gift) ikut terhitung.
-const CHARITY_RE = /religious\s*giving|infa[qk]|s[h]?[ao]d[ae]q[ao]?h|sedeka[hk]|zaka[th]|wakaf|donasi|amal\b/i;
+// "Zakat & Charity" (dan semua sub-kategorinya: Zakat, Infaq & Sedekah, Wakaf, Donation, Gift) ikut terhitung.
+const CHARITY_RE = /charity|religious\s*giving|infa[qk]|s[h]?[ao]d[ae]q[ao]?h|sedeka[hk]|zaka[th]|wakaf|donasi|amal\b/i;
 
 function loadState() {
   try {
@@ -561,7 +561,7 @@ export default function AnalysisPage() {
             </section>
           )}
           <Explain title={t("Apa yang dihitung?")}
-            text={t("Semua pengeluaran di kategori Religious Giving beserta sub-kategorinya (mis. Infaq & Sedekah, Zakat, Umroh, Gift), ditambah kategori lain yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal. Persentase dihitung dari total pemasukan di periode yang sama.")} />
+            text={t("Semua pengeluaran di kategori Zakat & Charity beserta sub-kategorinya (Zakat, Infaq & Sedekah, Wakaf, Donation, Gift), ditambah kategori lain yang namanya mengandung Infaq, Sedekah/Shadaqah, Zakat, Wakaf, Donasi, atau Amal. Persentase dihitung dari total pemasukan di periode yang sama.")} />
         </div>
       </Sheet>
 
