@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, WalletCards, ChartPie, Plus, Minus, ArrowLeftRight, WalletMinimal, Settings, ReceiptText } from "lucide-react";
+import { House, WalletCards, ChartPie, Plus, Minus, ArrowLeftRight, Settings, ReceiptText } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 
 // 4 tab + tombol catat. Laporan anggaran ada di Beranda & Analisis; mengatur anggaran di Pengaturan.
@@ -17,7 +17,6 @@ const ACTIONS = [
   { type: "expense", label: "Pengeluaran", icon: Minus, color: "#FF3B30" },
   { type: "income", label: "Pemasukan", icon: Plus, color: "#34C759" },
   { type: "transfer", label: "Transfer", icon: ArrowLeftRight, color: "#2563EB" },
-  { type: "account", label: "Akun / pocket baru", icon: WalletMinimal, color: "#FF9500" },
 ];
 
 export function Mark({ size = 32 }) {
@@ -26,7 +25,7 @@ export function Mark({ size = 32 }) {
 
 export default function AppChrome() {
   const pathname = usePathname();
-  const { openTx, openAccount, invites, t } = useApp();
+  const { openTx, invites, t } = useApp();
   const [open, setOpen] = useState(false);
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
@@ -35,8 +34,7 @@ export default function AppChrome() {
 
   function pick(a) {
     setOpen(false);
-    if (a.type === "account") openAccount({});
-    else openTx(walletId ? { type: a.type, accountId: walletId } : { type: a.type });
+    openTx(walletId ? { type: a.type, accountId: walletId } : { type: a.type });
   }
 
   const addButton = (cls) => (

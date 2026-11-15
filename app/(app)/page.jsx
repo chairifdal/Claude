@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo } from "react";
-import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Plus, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Settings, ChevronRight, UserPlus, ArrowUpRight, ArrowDownLeft, Sparkles } from "lucide-react";
 import { useApp, useTransactions, rootCategory } from "@/lib/app-data";
 import { budgetReport } from "@/lib/budgets";
 import { monthRange, firstName, formatIDR } from "@/lib/format";
@@ -14,7 +14,7 @@ import BillsCard from "@/components/BillsCard";
 import GoalsCard from "@/components/GoalsCard";
 
 export default function HomePage() {
-  const { profile, people, accounts, hidden, toggleHidden, openAccount, openTx, categoryById, invites, user, loading, budgets, bills, accountById,
+  const { profile, people, accounts, hidden, toggleHidden, openTx, categoryById, invites, user, loading, budgets, bills, accountById,
     supabase, notify, refresh, t, countsInStats, statRows, cycle, salaryRoot, homeHidden } = useApp();
   const show = (key) => !homeHidden.includes(key);
   // Tagihan memakai bulan kalender; ringkasan memakai periode keuangan (kalender / gajian / tanggal tetap)
@@ -259,14 +259,10 @@ export default function HomePage() {
                   <Money value={a.balance} compact className="text-[18px] font-bold tracking-tight" dots={5} />
                 </Link>
               ))}
-              <button onClick={() => openAccount({})}
-                className="flex w-[120px] flex-none flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-control text-[15px] font-medium text-ink-soft lg:w-auto lg:py-6">
-                <Plus className="h-6 w-6" /> {t("Tambah")}
-              </button>
             </div>
             {!loading && accounts.length === 0 && (
               <div className="mt-2"><Empty title={t("Belum ada akun")} text={t("Tambahkan rekening, e-wallet, atau dompet tunai.")}
-                action={<button className="btn-primary h-11 text-[16px]" onClick={() => openAccount({})}>{t("Buat akun")}</button>} /></div>
+                action={<Link href="/dompet" className="btn-primary h-11 text-[16px]">{t("Buka Dompet")}</Link>} /></div>
             )}
           </section>
           </>)}
