@@ -14,6 +14,7 @@ import { CategoryIcon, Money, PageHeader, Avatar, Empty, Segmented, AccountGlyph
 import { FilterChip, PeriodPill } from "@/components/PeriodBar";
 import { TxRow } from "@/components/TxList";
 import MoneyFlow, { buildFlow } from "@/components/MoneyFlow";
+import { useHistoryDetail } from "@/lib/useHistoryDetail";
 
 const today = () => toISODate(new Date());
 const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 29); return toISODate(d); };
@@ -38,7 +39,8 @@ export default function AnalysisPage() {
   const set = (patch) => setSt((s) => ({ ...s, ...patch }));
   useEffect(() => { try { sessionStorage.setItem("kk-analysis", JSON.stringify(st)); } catch {} }, [st]);
   const { period, anchor, kind, who, group, range } = st;
-  const [detail, setDetail] = useState(null);
+  // Detail tile insight tercatat di riwayat: geser kembali menutup detail, tidak pindah halaman
+  const [detail, openDetail, closeDetail] = useHistoryDetail();
   const [flowMode, setFlowMode] = useState("rp");
 
   // Periode "Bulan" mengikuti siklus orang yang dipilih: saya → siklus saya; lainnya → bulan kalender
@@ -247,25 +249,25 @@ export default function AnalysisPage() {
 
       {/* Ringkasan: tile yang bisa diketuk untuk detail */}
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Tile icon={LineChart} title={t("Tren")} color="#06B6D4" onClick={() => setDetail("trend")}
+        <Tile icon={LineChart} title={t("Tren")} color="#06B6D4" onClick={() => openDetail("trend")}
           value={expDelta === null ? "—" : <>{expDelta >= 0 ? "+" : ""}{Math.round(expDelta * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
           status={trendStatus.label} statusColor={trendStatus.color}>
           <Spark buckets={data.expenseBs} prev={data.prevBs} color="#06B6D4" now={now} />
         </Tile>
 
-        <Tile icon={PieIcon} title={t("Paling boros")} color={topCat?.cat.color || "#FF2D55"} onClick={() => setDetail("top")}
+        <Tile icon={PieIcon} title={t("Paling boros")} color={topCat?.cat.color || "#FF2D55"} onClick={() => openDetail("top")}
           value={topCat ? <Money value={topCat.total} compact dots={4} /> : "—"}
           status={topCat ? topCat.cat.name : t("Belum ada pengeluaran")} statusColor={topCat?.cat.color}>
           <MiniDonut groups={data.expenseRoots} />
         </Tile>
 
-        <Tile icon={PiggyBank} title={t("Rasio menabung")} color="#0A84FF" onClick={() => setDetail("save")}
+        <Tile icon={PiggyBank} title={t("Rasio menabung")} color="#0A84FF" onClick={() => openDetail("save")}
           value={saveRate === null ? "—" : <>{saveRate > 0 ? "+" : ""}{Math.round(saveRate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
           status={rateStatus.label} statusColor={rateStatus.color}>
           <Gauge value={saveRate} />
         </Tile>
 
-        <Tile icon={Shuffle} title={t("Arus uang")} color="#30B0C7" onClick={() => setDetail("flow")}
+        <Tile icon={Shuffle} title={t("Arus uang")} color="#30B0C7" onClick={() => openDetail("flow")}
           value={<Money value={data.income} compact dots={4} />}
           status={data.income > 0 ? t("{pct}% terpakai", { pct: Math.round((data.expense / data.income) * 100) }) : t("Belum ada pemasukan")}
           statusColor={data.income > 0 && data.expense > data.income ? BAD : "#30B0C7"}>
@@ -273,7 +275,7 @@ export default function AnalysisPage() {
         </Tile>
 
         {invAccounts.length > 0 && (
-          <Tile icon={TrendingUp} title={t("Investasi")} color={INV_COLOR} onClick={() => setDetail("invest")}
+          <Tile icon={TrendingUp} title={t("Investasi")} color={INV_COLOR} onClick={() => openDetail("invest")}
             value={invRate === null ? "—" : <>{pctText(invRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
             status={data.inv.change ? <>{data.inv.change > 0 ? t("Untung") : t("Rugi")} <Money value={data.inv.change} compact sign dots={3} /></>
               : invNet ? <>{invNet > 0 ? t("Disetor") : t("Ditarik")} <Money value={Math.abs(invNet)} compact dots={3} /></> : t("Tidak ada setoran")}
@@ -283,21 +285,21 @@ export default function AnalysisPage() {
         )}
 
         {hasCharityCats && (
-          <Tile icon={HandHeart} title={charityTitle} color={CHARITY} onClick={() => setDetail("charity")}
+          <Tile icon={HandHeart} title={charityTitle} color={CHARITY} onClick={() => openDetail("charity")}
             value={charityRate === null ? "—" : <>{pctText(charityRate)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
             status={<Money value={data.charity.total} compact dots={4} />}>
             <RateBar rate={charityRate} color={CHARITY} label={t("dari pemasukan")} max={0.2} />
           </Tile>
         )}
 
-        <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => setDetail("budget")}
+        <Tile icon={Target} title={t("Anggaran")} color="#0A84FF" onClick={() => openDetail("budget")}
           value={budget.rate === null ? "—" : <>{Math.round(budget.rate * 100)}<small className="ml-0.5 text-[15px] font-medium text-ink-soft">%</small></>}
           status={budgetStatus.label} statusColor={budgetStatus.color}>
           <PaceBar rate={budget.rate} pace={budget.pace} color={budgetStatus.color} />
         </Tile>
 
         {showPeople && (
-          <Tile icon={Users} title={t("Per orang")} color="#FF9F0A" onClick={() => setDetail("people")}
+          <Tile icon={Users} title={t("Per orang")} color="#FF9F0A" onClick={() => openDetail("people")}
             value={<Money value={data.total} compact dots={4} />}
             status={data.byPerson[0] ? t("Terbanyak: {name}", { name: data.byPerson[0][0] === user?.id ? t("Saya") : firstName(people[data.byPerson[0][0]]) || "—" }) : "—"}>
             <span className="flex -space-x-2 pt-3">
@@ -330,7 +332,7 @@ export default function AnalysisPage() {
       </section>
 
       {/* ---------- Detail ---------- */}
-      <Sheet open={detail === "trend"} onClose={() => setDetail(null)} title={t("Tren")} full>
+      <Sheet open={detail === "trend"} onClose={closeDetail} title={t("Tren")} full>
         <div className="space-y-4 pb-6">
           <Segmented value={kind} onChange={(v) => set({ kind: v })} className="w-full"
             options={[{ value: "expense", label: t("Pengeluaran") }, { value: "income", label: t("Pemasukan") }]} />
@@ -352,7 +354,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "top"} onClose={() => setDetail(null)} title={t("Paling boros")} full>
+      <Sheet open={detail === "top"} onClose={closeDetail} title={t("Paling boros")} full>
         <div className="space-y-4 pb-6">
           {data.expenseRoots.length === 0 ? <Empty title={t("Tidak ada transaksi")} /> : (
             <section className="card p-5">
@@ -385,7 +387,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "save"} onClose={() => setDetail(null)} title={t("Rasio menabung")} full>
+      <Sheet open={detail === "save"} onClose={closeDetail} title={t("Rasio menabung")} full>
         <div className="space-y-4 pb-6">
           <section className="card p-5">
             <div className="mx-auto w-48"><Gauge value={saveRate} big /></div>
@@ -402,7 +404,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "flow"} onClose={() => setDetail(null)} title={t("Arus uang")} full>
+      <Sheet open={detail === "flow"} onClose={closeDetail} title={t("Arus uang")} full>
         <div className="space-y-4 pb-6">
           <section className="card p-4">
             {data.flow.total > 0 ? (
@@ -428,7 +430,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "invest"} onClose={() => setDetail(null)} title={t("Investasi")} full>
+      <Sheet open={detail === "invest"} onClose={closeDetail} title={t("Investasi")} full>
         <div className="space-y-4 pb-6">
           <section className="card p-5">
             <p className="text-[15px] text-ink-soft">{t("Bagian pemasukan yang diinvestasikan")}</p>
@@ -540,7 +542,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "charity"} onClose={() => setDetail(null)} title={charityTitle} full>
+      <Sheet open={detail === "charity"} onClose={closeDetail} title={charityTitle} full>
         <div className="space-y-4 pb-6">
           <section className="card p-5">
             <p className="text-[15px] text-ink-soft">{t("Total di {period}", { period: periodLabel(period, anchor, ctx) })}</p>
@@ -565,7 +567,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "budget"} onClose={() => setDetail(null)} title={t("Laporan anggaran")} full>
+      <Sheet open={detail === "budget"} onClose={closeDetail} title={t("Laporan anggaran")} full>
         <div className="space-y-4 pb-6">
           {budget.rate === null ? (
             <Empty title={t("Belum ada anggaran")} text={t("Anggaran diatur di Pengaturan, lalu laporannya tampil di sini.")} />
@@ -631,7 +633,7 @@ export default function AnalysisPage() {
         </div>
       </Sheet>
 
-      <Sheet open={detail === "people"} onClose={() => setDetail(null)} title={t("Per orang")} full>
+      <Sheet open={detail === "people"} onClose={closeDetail} title={t("Per orang")} full>
         <div className="space-y-4 pb-6">
           <Segmented value={kind} onChange={(v) => set({ kind: v })} className="w-full"
             options={[{ value: "expense", label: t("Pengeluaran") }, { value: "income", label: t("Pemasukan") }]} />
@@ -640,7 +642,7 @@ export default function AnalysisPage() {
               <ul className="space-y-4">
                 {data.byPerson.map(([id, v]) => (
                   <li key={id}>
-                    <button onClick={() => { set({ who: id }); setDetail(null); }} className="flex w-full items-center gap-3 text-left">
+                    <button onClick={() => { set({ who: id }); closeDetail(); }} className="flex w-full items-center gap-3 text-left">
                       <Avatar profile={people[id]} size={36} />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
