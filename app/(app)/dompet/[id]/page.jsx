@@ -28,8 +28,9 @@ export default function AccountDetail() {
     for (const tx of rows) {
       const d = new Date(tx.occurred_at);
       if (d < start || d >= end) continue;
-      const incoming = tx.type === "income" || (tx.type === "transfer" && tx.to_account_id === id);
-      if (incoming) inn += tx.amount; else out += tx.amount + (tx.fee || 0);
+      // "Masuk" hanya pemasukan; transfer masuk dari akun lain tidak dihitung
+      if (tx.type === "transfer" && tx.to_account_id === id) continue;
+      if (tx.type === "income") inn += tx.amount; else out += tx.amount + (tx.fee || 0);
     }
     return { inn, out };
   }, [rows, id, cycle]);
