@@ -40,7 +40,7 @@ export default function PeriodSettings() {
                 {incomeRoots.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <p className="mt-2 text-[14px] text-ink-soft">
-                {t("Periode baru dimulai di tanggal pemasukan kategori ini (termasuk sub-kategorinya). Gaji kedua yang masuk kurang dari 20 hari setelah awal periode tidak memulai periode baru.")}
+                {t("Periode baru dimulai di tanggal pemasukan kategori ini (termasuk sub-kategorinya, kecuali Bonus/THR, insentif, lembur, dan komisi). Gaji kedua yang masuk kurang dari 20 hari setelah awal periode tidak memulai periode baru.")}
               </p>
             </div>
           ) : (

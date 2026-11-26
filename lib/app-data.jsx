@@ -119,7 +119,8 @@ export function AppDataProvider({ children }) {
     if (mine?.period_mode === "salary") {
       const cats_ = cats.data || [];
       const root = salaryRootFor(mine, cats_);
-      const ids = root ? [root.id, ...cats_.filter((c) => c.parent_id === root.id).map((c) => c.id)] : [];
+      // Bonus/THR/insentif/lembur tidak memulai periode baru; hanya gaji rutin (dan catatan langsung di induk)
+      const ids = root ? [root.id, ...cats_.filter((c) => c.parent_id === root.id && !NON_PAYDAY_RE.test(c.name)).map((c) => c.id)] : [];
       if (ids.length) {
         const { data: sal } = await supabase.from("transactions").select("occurred_at")
           .eq("type", "income").in("category_id", ids).order("occurred_at", { ascending: false }).limit(120);
@@ -292,6 +293,9 @@ export function useTransactions({ accountId, from, to, limit = 500 } = {}) {
 }
 
 /** Kategori gaji yang memicu periode: pilihan di profil, atau kategori pemasukan utama bernama "Gaji". */
+/** Sub-kategori gaji yang bukan gajian rutin (tidak memicu periode baru). */
+export const NON_PAYDAY_RE = /bonus|thr|insentif|incentive|lembur|overtime|komisi|commission|rapel/i;
+
 export function salaryRootFor(profile, categories) {
   if (!profile) return null;
   const mine = categories.filter((c) => c.owner_id === profile.id && c.kind === "income" && !c.parent_id);
