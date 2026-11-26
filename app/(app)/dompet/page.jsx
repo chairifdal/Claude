@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Eye, EyeOff, ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import { useApp } from "@/lib/app-data";
 import { ACCOUNT_GROUPS, ACCOUNT_KINDS } from "@/lib/constants";
@@ -60,6 +60,10 @@ export default function WalletPage() {
     }).filter((g) => g.items.length);
   }, [accounts, t]);
   const archived = allAccounts.filter((a) => a.archived && a.owner_id === user?.id);
+  // Akun diarsipkan disembunyikan secara bawaan; pilihan tampil/sembunyi diingat per perangkat
+  const [showArchived, setShowArchived] = useState(false);
+  useEffect(() => { try { setShowArchived(localStorage.getItem("kk-show-archived") === "1"); } catch {} }, []);
+  const toggleArchived = () => setShowArchived((v) => { try { localStorage.setItem("kk-show-archived", v ? "0" : "1"); } catch {} return !v; });
 
   // Alokasi: aset positif per kelompok + utang kartu kredit
   const parts = groups.map((g) => ({ key: g.key, label: g.label, value: Math.abs(sum(g.items)), color: GROUP_COLOR[g.key] })).filter((p) => p.value > 0);
@@ -153,14 +157,23 @@ export default function WalletPage() {
             </button>
           )}
 
-          {archived.length > 0 && (
+          {archived.length > 0 && (showArchived ? (
             <section>
-              <h2 className="section-title mb-2 px-1">{t("Diarsipkan")}</h2>
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h2 className="section-title">{t("Diarsipkan")}</h2>
+                <button onClick={toggleArchived} className="flex items-center gap-1.5 text-[15px] font-medium text-brand-600">
+                  <EyeOff className="h-4 w-4" /> {t("Sembunyikan")}
+                </button>
+              </div>
               <div className="card p-1">
                 {archived.map((a) => <AccountRow key={a.id} a={a} user={user} people={people} />)}
               </div>
             </section>
-          )}
+          ) : (
+            <button onClick={toggleArchived} className="mx-auto flex items-center gap-1.5 py-2 text-[14px] font-medium text-ink-mute">
+              <Eye className="h-4 w-4" /> {t("Tampilkan akun diarsipkan ({n})", { n: archived.length })}
+            </button>
+          ))}
         </div>
       </div>
     </div>
