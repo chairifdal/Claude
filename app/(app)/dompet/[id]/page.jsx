@@ -28,7 +28,9 @@ export default function AccountDetail() {
     for (const tx of rows) {
       const d = new Date(tx.occurred_at);
       if (d < start || d >= end) continue;
-      // Masuk = pemasukan saja, Keluar = pengeluaran + biaya transfer; perpindahan uang antar akun tidak dihitung
+      // Masuk = pemasukan saja, Keluar = pengeluaran + biaya transfer; perpindahan uang antar akun
+      // dan penyesuaian saldo tidak dihitung (sama seperti Analisis)
+      if (tx.is_adjustment) continue;
       if (tx.type === "income") inn += tx.amount;
       else if (tx.type === "expense") out += tx.amount + (tx.fee || 0);
       else if (tx.type === "transfer" && tx.account_id === id) out += tx.fee || 0;
